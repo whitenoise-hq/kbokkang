@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, isNavActive } from './nav-items'
+import { LogoutButton } from './logout-button'
 
-/** 좁은 화면용 시트 내비게이션 */
+/** 좁은 화면용 시트 내비게이션. 구성은 사이드바와 동일하게 유지한다. */
 export const MobileNav = () => {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -22,29 +23,40 @@ export const MobileNav = () => {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-64 p-0">
-        <SheetHeader className="h-16 justify-center px-5">
-          <SheetTitle className="text-sm">크보깡 어드민</SheetTitle>
+      <SheetContent side="left" className="bg-sidebar flex w-60 flex-col p-0">
+        <SheetHeader className="h-16 justify-center px-4">
+          <SheetTitle className="text-sidebar-foreground text-base font-bold tracking-tight">
+            크보깡
+          </SheetTitle>
         </SheetHeader>
 
-        <nav className="space-y-0.5 px-3">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isNavActive(item, pathname)
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <item.icon className="size-4 shrink-0" aria-hidden />
-              {item.label}
-            </Link>
-          ))}
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
+          {NAV_ITEMS.map((item) => {
+            const active = isNavActive(item, pathname)
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  active
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                    : 'text-sidebar-muted hover:bg-muted hover:text-sidebar-foreground font-medium',
+                )}
+              >
+                <item.icon className="size-4 shrink-0" aria-hidden />
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
+
+        <div className="border-sidebar-border border-t p-3">
+          <LogoutButton />
+        </div>
       </SheetContent>
     </Sheet>
   )

@@ -4,24 +4,23 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, isNavActive } from './nav-items'
+import { Logo } from './logo'
+import { LogoutButton } from './logout-button'
 
-/** 좌측 고정 사이드바. 평면 나열 8개 메뉴. */
+/**
+ * 사이드바. 배경색(--sidebar)으로 본문과 구분되는 sticky 컬럼.
+ * 상단은 로고, 하단은 admin 배지 + 로그아웃.
+ */
 export const Sidebar = () => {
   const pathname = usePathname()
 
   return (
-    <aside className="bg-card fixed inset-y-0 left-0 hidden w-60 flex-col border-r lg:flex">
-      <div className="flex h-16 items-center gap-2.5 px-5">
-        <span className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-lg text-sm font-bold">
-          깡
-        </span>
-        <div className="leading-tight">
-          <p className="text-sm font-bold">크보깡</p>
-          <p className="text-muted-foreground text-[11px]">어드민</p>
-        </div>
+    <aside className="bg-sidebar border-sidebar-border sticky top-0 hidden h-svh w-56 shrink-0 flex-col border-r lg:flex">
+      <div className="flex h-16 items-center px-4">
+        <Logo />
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-2">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-2">
         {NAV_ITEMS.map((item) => {
           const active = isNavActive(item, pathname)
 
@@ -31,21 +30,29 @@ export const Sidebar = () => {
               href={item.href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all',
                 active
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm'
+                  : 'text-sidebar-muted hover:bg-muted hover:text-sidebar-foreground font-medium',
               )}
             >
-              <item.icon className="size-4 shrink-0" aria-hidden />
+              <item.icon
+                className={cn(
+                  'size-4 shrink-0 transition-colors',
+                  active
+                    ? 'text-sidebar-accent-foreground'
+                    : 'text-sidebar-muted group-hover:text-sidebar-foreground',
+                )}
+                aria-hidden
+              />
               {item.label}
             </Link>
           )
         })}
       </nav>
 
-      <div className="text-muted-foreground border-t px-5 py-3 text-[11px]">
-        목업 데이터 · DB 미연결
+      <div className="border-sidebar-border border-t p-3">
+        <LogoutButton />
       </div>
     </aside>
   )

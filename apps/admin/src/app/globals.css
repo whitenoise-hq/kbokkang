@@ -11,7 +11,8 @@
 :root {
   --radius: 0.75rem;
 
-  --background: #ffffff;
+  /* 페이지는 회색, 카드는 흰색 — 흰 배경에 흰 카드면 구분이 안 됨 */
+  --background: #f4f6f8;
   --foreground: #191f28;
   --card: #ffffff;
   --card-foreground: #191f28;
@@ -34,6 +35,14 @@
   --success: #00b26e;
   --warning: #ffb020;
 
+  /* 사이드바 — 회색 본문 위의 흰 패널 */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #191f28;
+  --sidebar-muted: #8b95a1;
+  --sidebar-border: #e5e8eb;
+  --sidebar-accent: #e8f1fd;
+  --sidebar-accent-foreground: #1b64da;
+
   --grade-normal: #8b95a1;
   --grade-rare: #4a90d9;
   --grade-epic: #9b51e0;
@@ -48,6 +57,10 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
+
+  /* 그림자 — 디자인 가이드 5장. 은은하게, 진한 그림자 금지 */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.03), 0 2px 8px rgb(0 0 0 / 0.06);
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.1), 0 1px 3px rgb(0 0 0 / 0.06);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -72,6 +85,13 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
 
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
   --color-grade-normal: var(--grade-normal);
   --color-grade-rare: var(--grade-rare);
   --color-grade-epic: var(--grade-epic);
@@ -88,8 +108,110 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 
+  /**
+   * Tailwind v4 는 button 의 기본 커서를 pointer 에서 default 로 바꿨고
+   * shadcn 컴포넌트도 cursor-pointer 를 붙이지 않는다. 클릭 가능한 요소에 되살린다.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='option']:not([aria-disabled='true']),
+  [role='menuitem']:not([aria-disabled='true']),
+  label[for],
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
+
   /* 포인트·스코어 등 숫자는 자릿수 흔들림 방지 */
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+/**
+ * 애니메이션 — hatch-it 규격에 맞춘다.
+ * 과하지 않게, 빠르고 자연스럽게(디자인 가이드 7장: 200~300ms).
+ */
+
+/* 페이지 콘텐츠 등장 — 스켈레톤에서 실제 콘텐츠로 바뀔 때 팍 튀지 않게 */
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+main {
+  animation: content-in 0.32s ease-out both;
+}
+
+/* 컨테이너 등장 */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.24s ease-out both;
+}
+
+/* 모달 백드롭 페이드 */
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/**
+ * 편지 열리듯 — 아래에서 가운데로 세워지며 등장 (transform-origin: 하단).
+ * 주의: 가운데 정렬은 Tailwind 의 `translate` 속성(-50% -50%)이 담당한다.
+ * 여기서 transform 에 -50% 를 다시 넣으면 두 배로 밀려 화면 중앙을 벗어난다.
+ */
+@keyframes letter-open {
+  from {
+    opacity: 0;
+    transform: translateY(56px) scale(0.94) rotateX(14deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotateX(0);
+  }
+}
+
+@keyframes letter-close {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main,
+  .animate-rise {
+    animation: none;
   }
 }

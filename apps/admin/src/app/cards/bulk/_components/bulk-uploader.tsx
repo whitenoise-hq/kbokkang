@@ -249,11 +249,22 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
         }}
         className={cn(
           'flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-12 transition-colors',
-          dragging ? 'border-primary bg-accent' : 'hover:border-muted-foreground/40',
+          dragging
+            ? 'border-primary bg-accent'
+            : 'bg-card hover:border-muted-foreground/40 hover:bg-muted/60 border-border',
         )}
       >
-        <ImagePlus className="text-muted-foreground size-6" aria-hidden />
-        <p className="text-sm font-medium">이미지를 끌어다 놓거나 클릭해서 선택</p>
+        <span
+          className={cn(
+            'grid size-11 place-items-center rounded-full transition-colors',
+            dragging ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
+          )}
+        >
+          <ImagePlus className="size-5" aria-hidden />
+        </span>
+        <p className="mt-1 text-sm font-medium">
+          {dragging ? '여기에 놓으세요' : '이미지를 끌어다 놓거나 클릭해서 선택'}
+        </p>
         <p className="text-muted-foreground text-xs">
           세로 비율(3:4) 통이미지 · 5MB 이하 · 한 번에 최대 {MAX_FILES}장
         </p>
@@ -382,7 +393,7 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
       </Card>
 
       {drafts.length > 0 && (
-        <div className="bg-background/90 sticky bottom-0 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 backdrop-blur">
+        <div className="bg-card/90 sticky bottom-0 flex items-center justify-between gap-4 rounded-xl border px-4 py-3 backdrop-blur">
           <div className="text-xs">
             {invalidCount > 0 ? (
               <p className="text-destructive flex items-center gap-1.5 font-medium">

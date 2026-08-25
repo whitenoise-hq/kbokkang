@@ -16,7 +16,7 @@ export const StatCard = ({
   icon: LucideIcon
 }) => (
   <Card className="gap-0 py-5">
-    <CardContent className="px-5">
+    <CardContent className="px-6">
       <div className="flex items-start justify-between gap-3">
         <p className="text-muted-foreground text-sm font-medium">{label}</p>
         <Icon className="text-muted-foreground/60 size-4 shrink-0" aria-hidden />
