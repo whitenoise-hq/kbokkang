@@ -19,7 +19,11 @@ export const cardInputSchema = z.object({
   name: z.string().trim().min(1, '카드 이름을 입력하세요').max(40),
   grade: cardGradeSchema,
   type: cardTypeSchema,
-  imageUrl: z.string().url('이미지 URL이 올바르지 않습니다'),
+  /**
+   * 이미지 참조. null 허용 — 이미지 없이 먼저 등록하고 나중에 업로드하는 흐름을 지원한다.
+   * 형식(Storage 공개 URL vs 버킷 경로)은 4단계 Storage 연결 시 확정하므로 여기서 제약하지 않는다.
+   */
+  imageUrl: z.string().trim().min(1, '이미지 경로가 비어 있습니다').nullable().default(null),
   drawWeight: z.number().int().min(1).max(1000).default(1),
   isSeason: z.boolean().default(false),
 })

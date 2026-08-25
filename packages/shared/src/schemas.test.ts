@@ -28,10 +28,20 @@ describe('cardInputSchema', () => {
     expect(cardInputSchema.parse({ ...valid, name: '  루키  ' }).name).toBe('루키')
   })
 
-  it('빈 이름·잘못된 등급·잘못된 URL을 거부한다', () => {
+  it('이미지 없이도 등록할 수 있다(나중에 업로드)', () => {
+    const { imageUrl: _omitted, ...withoutImage } = valid
+    expect(cardInputSchema.parse(withoutImage).imageUrl).toBeNull()
+    expect(cardInputSchema.parse({ ...valid, imageUrl: null }).imageUrl).toBeNull()
+  })
+
+  it('Storage 경로 형태도 허용한다(형식은 4단계에서 확정)', () => {
+    expect(cardInputSchema.safeParse({ ...valid, imageUrl: 'cards/e01.png' }).success).toBe(true)
+  })
+
+  it('빈 이름·잘못된 등급·빈 이미지 경로·가중치 0을 거부한다', () => {
     expect(cardInputSchema.safeParse({ ...valid, name: '   ' }).success).toBe(false)
     expect(cardInputSchema.safeParse({ ...valid, grade: 'ultra' }).success).toBe(false)
-    expect(cardInputSchema.safeParse({ ...valid, imageUrl: 'not-a-url' }).success).toBe(false)
+    expect(cardInputSchema.safeParse({ ...valid, imageUrl: '   ' }).success).toBe(false)
     expect(cardInputSchema.safeParse({ ...valid, drawWeight: 0 }).success).toBe(false)
   })
 })
