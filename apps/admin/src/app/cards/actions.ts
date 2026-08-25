@@ -43,6 +43,43 @@ export const createCard = async (raw: unknown): Promise<ActionResult> => {
   }
 }
 
+/**
+ * 일괄 등록. 도감번호는 배열 순서대로 서버에서 부여된다.
+ * 실제 DB 연결 후에는 트랜잭션으로 묶어 부분 실패를 막아야 한다(3단계 검토 항목).
+ */
+export const createCardsBulk = async (rawList: readonly unknown[]): Promise<ActionResult> => {
+  try {
+    if (rawList.length === 0) return { ok: false, message: '등록할 카드가 없습니다' }
+
+    const inputs = rawList.map(parseInput)
+    const created = []
+
+    for (const input of inputs) {
+      created.push(await repositories.cards.create(input))
+    }
+
+    revalidatePath('/cards')
+    revalidatePath('/')
+
+    const first = created.at(0)
+    const last = created.at(-1)
+    const range =
+      first !== undefined && last !== undefined && created.length > 1
+        ? ` (${first.dexNo}–${last.dexNo})`
+        : first !== undefined
+          ? ` (${first.dexNo})`
+          : ''
+
+    return { ok: true, message: `${created.length}장 등록 완료${range}` }
+  } catch (error) {
+    console.error('카드 일괄 등록 실패:', error)
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : '카드 일괄 등록에 실패했습니다',
+    }
+  }
+}
+
 export const updateCard = async (id: string, raw: unknown): Promise<ActionResult> => {
   try {
     const updated = await repositories.cards.update(id, parseInput(raw))
