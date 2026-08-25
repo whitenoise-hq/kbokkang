@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/**
+ * 어드민은 shadcn/ui 기반(04_앱디자인가이드.md 대상 아님).
+ * 다만 primary는 서비스 브랜드 컬러(#3182F6)를 공유한다.
+ * 등급색은 @kbokkang/shared 의 CARD_GRADE_META 와 동일하게 유지할 것.
+ */
+:root {
+  --radius: 0.75rem;
+
+  --background: #ffffff;
+  --foreground: #191f28;
+  --card: #ffffff;
+  --card-foreground: #191f28;
+  --popover: #ffffff;
+  --popover-foreground: #191f28;
+  --primary: #3182f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f9fafb;
+  --secondary-foreground: #191f28;
+  --muted: #f9fafb;
+  --muted-foreground: #8b95a1;
+  --accent: #e8f1fd;
+  --accent-foreground: #1b64da;
+  --destructive: #f04452;
+  --destructive-foreground: #ffffff;
+  --border: #e5e8eb;
+  --input: #e5e8eb;
+  --ring: #3182f6;
+
+  --success: #00b26e;
+  --warning: #ffb020;
+
+  --grade-normal: #8b95a1;
+  --grade-rare: #4a90d9;
+  --grade-epic: #9b51e0;
+  --grade-legend: #f2a900;
+  --grade-mythic: #e03131;
+}
+
+@theme inline {
+  /* next/font/local 이 주입하는 변수. fonts.ts 참조 */
+  --font-sans: var(--font-pretendard), system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --color-grade-normal: var(--grade-normal);
+  --color-grade-rare: var(--grade-rare);
+  --color-grade-epic: var(--grade-epic);
+  --color-grade-legend: var(--grade-legend);
+  --color-grade-mythic: var(--grade-mythic);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* 포인트·스코어 등 숫자는 자릿수 흔들림 방지 */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

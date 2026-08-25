@@ -1,0 +1,12 @@
+{
+  "name": "@kbokkang/assets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "앱·어드민 공용 정적 에셋(폰트 등). 코드 없음, 파일만 보관.",
+  "exports": {
+    "./fonts/*": "./fonts/*"
+  },
+  "files": [
+    "fonts"
+  ]
+}

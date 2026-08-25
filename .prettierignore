@@ -1,0 +1,13 @@
+node_modules/
+.next/
+dist/
+.turbo/
+pnpm-lock.yaml
+coverage/
+
+# 기획 문서는 원본 서식 유지 (표 정렬 churn 방지)
+docs/
+CLAUDE.md
+
+# Next.js 자동 생성
+next-env.d.ts
