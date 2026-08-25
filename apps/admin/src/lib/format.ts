@@ -45,3 +45,35 @@ export const formatPercent = (value: number, digits = 1): string => `${value.toF
 /** 진행률 0~100 */
 export const toPercent = (owned: number, total: number): number =>
   total === 0 ? 0 : (owned / total) * 100
+
+/**
+ * KST 기준 오늘 (YYYY-MM-DD).
+ * timeZone 을 고정하므로 서버(UTC)와 클라이언트에서 같은 값이 나온다(하이드레이션 불일치 방지).
+ */
+const isoDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: KST })
+
+export const todayInKst = (): string => isoDateFormatter.format(new Date())
+
+/** ISO 날짜(YYYY-MM-DD)를 일 단위로 이동. 월/연 경계를 알아서 넘긴다. */
+export const shiftIsoDate = (isoDate: string, days: number): string => {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  if (year === undefined || month === undefined || day === undefined) return isoDate
+
+  const shifted = new Date(year, month - 1, day + days)
+  return `${String(shifted.getFullYear())}-${String(shifted.getMonth() + 1).padStart(2, '0')}-${String(shifted.getDate()).padStart(2, '0')}`
+}
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const
+
+export type Weekday = (typeof WEEKDAYS)[number]
+
+export const weekdayLabels = WEEKDAYS
+
+/** YYYY-MM-DD → 'YYYY.MM.DD (요일)' */
+export const formatDateWithWeekday = (isoDate: string): string => {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  if (year === undefined || month === undefined || day === undefined) return isoDate
+
+  const weekday = WEEKDAYS[new Date(year, month - 1, day).getDay()] ?? ''
+  return `${String(year)}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')} (${weekday})`
+}

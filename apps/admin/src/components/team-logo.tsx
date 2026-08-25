@@ -9,16 +9,22 @@ import { cn } from '@/lib/utils'
  *
  * Storage 연결 후 next/image 로 교체할 것(현재는 data URL 도 들어올 수 있어 img 사용).
  */
+const SIZE_CLASS = {
+  sm: 'size-4',
+  md: 'size-6',
+  lg: 'size-9',
+} as const
+
 export const TeamLogo = ({
   team,
   size = 'md',
   className,
 }: {
   team: Team | null | undefined
-  size?: 'sm' | 'md'
+  size?: keyof typeof SIZE_CLASS
   className?: string
 }) => {
-  const box = size === 'sm' ? 'size-4' : 'size-6'
+  const box = SIZE_CLASS[size]
 
   if (team === null || team === undefined) {
     return <span className={cn(box, 'bg-muted shrink-0 rounded-full', className)} aria-hidden />

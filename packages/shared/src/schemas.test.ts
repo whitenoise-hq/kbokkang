@@ -3,6 +3,7 @@ import {
   cardInputSchema,
   dexNoSchema,
   drawRequestSchema,
+  gameSettleSchema,
   pointAdjustSchema,
   predictionInputSchema,
 } from './schemas'
@@ -85,6 +86,36 @@ describe('predictionInputSchema', () => {
 
   it('gameId가 uuid가 아니면 거부한다', () => {
     expect(predictionInputSchema.safeParse({ ...base, gameId: 'abc' }).success).toBe(false)
+  })
+})
+
+describe('gameSettleSchema', () => {
+  const base = { gameId: 'game-20260825-1' }
+
+  it('정상 스코어를 통과시킨다', () => {
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 5, awayScore: 3 }).success).toBe(true)
+  })
+
+  it('무승부(동점)를 허용한다 — KBO는 무승부가 있다', () => {
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 3, awayScore: 3 }).success).toBe(true)
+  })
+
+  it('0점도 허용한다(완봉)', () => {
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 0, awayScore: 4 }).success).toBe(true)
+  })
+
+  it('음수·소수·범위 초과를 거부한다', () => {
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: -1, awayScore: 3 }).success).toBe(false)
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 1.5, awayScore: 3 }).success).toBe(
+      false,
+    )
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 100, awayScore: 3 }).success).toBe(
+      false,
+    )
+  })
+
+  it('스코어가 빠지면 거부한다', () => {
+    expect(gameSettleSchema.safeParse({ ...base, homeScore: 5 }).success).toBe(false)
   })
 })
 

@@ -64,3 +64,15 @@ export const pointAdjustSchema = z.object({
 })
 
 export type PointAdjust = z.infer<typeof pointAdjustSchema>
+
+/**
+ * 운영자 수동 정산 — 크롤링 실패 시 결과를 직접 입력한다.
+ * KBO는 무승부가 존재하므로 동점을 허용한다(연장 후 무승부).
+ */
+export const gameSettleSchema = z.object({
+  gameId: z.string().min(1),
+  homeScore: z.number().int().min(0).max(99),
+  awayScore: z.number().int().min(0).max(99),
+})
+
+export type GameSettle = z.infer<typeof gameSettleSchema>
