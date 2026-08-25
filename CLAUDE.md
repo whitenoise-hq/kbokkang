@@ -43,6 +43,23 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
   - 앱(`apps/mobile`): 디자인 가이드 토큰(`@kbokkang/shared`의 `theme.ts`) 적용.
   - 어드민(`apps/admin`): shadcn/ui 사용(디자인 가이드 대상 아님). primary만 브랜드 컬러 공유.
   - 등급색은 카드·등급 표시 전용. 일반 UI 버튼 등에 남용 금지.
+
+### 어드민 UI 규격 (구현 확정)
+
+- 레이아웃: **전체화면 너비**. 좌측 사이드바(w-56, `--sidebar` 배경) + 본문 `px-6 py-10`.
+- 표면 계층: 페이지 `#F4F6F8` / 카드·모달·사이드바 흰색. **흰 배경에 흰 카드 금지**(구분 안 됨).
+  - 흰 표면에는 `bg-card`를 쓴다. `bg-background`는 회색 페이지용.
+- 애니메이션(hatch-it 규격): `main`에 `content-in`, 모달은 `letter-open` + 백드롭 blur,
+  토스트는 상단 중앙 알약형 2.5초.
+  - ⚠️ Tailwind v4는 `translate-x-[-50%]`를 `transform`이 아니라 **독립 `translate` 속성**으로
+    컴파일한다. 모달 키프레임에 `translate(-50%)`를 넣으면 두 배로 밀린다.
+- 캘린더는 **직접 구현**(`components/date-picker.tsx`). 캘린더 라이브러리 설치 금지.
+- 차트는 **recharts**. 축·툴팁 스타일은 `components/charts/chart-theme.ts`에 단일 정의.
+- 스켈레톤: 데이터 화면마다 라우트 `loading.tsx`. **실제 레이아웃과 같은 높이**로 맞출 것.
+- 포커스 링 제거됨(`globals.css` 하단, `@layer` 밖). 되살리려면 그 블록만 삭제.
+- shadcn 컴포넌트를 직접 수정한 것들(`table`, `card`, `dialog`, `alert-dialog`, `sheet`, `tabs`,
+  `button`, `sonner`)은 **CLI로 다시 add 하면 덮어써진다.** 재생성 시 재적용 필요.
+- `exactOptionalPropertyTypes`는 어드민에서만 해제(Radix 미지원). `packages/shared`는 유지.
 - **폰트(Pretendard)는 `packages/assets/fonts/pretendard/`에 파일로 보관.** npm 패키지 설치 금지(97MB, RN에서 못 씀).
   - 웹(admin): `web/*.woff2` — `next/font/local`로 참조.
   - 앱(mobile): `native/*.otf` — RN은 woff2 불가.
@@ -50,7 +67,28 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 
 ## 현재 상태
 
-- 기획 완료. **1단계(모노레포 환경설정) 완료** — Turborepo + pnpm, `apps/admin`(Next 16/React 19/Tailwind 4/shadcn 전제), `packages/shared`(상수·디자인 토큰·zod 스키마, 테스트 52개), `packages/assets`(Pretendard).
-- 다음: **2단계 어드민 화면(UI)** — 목업 데이터로 구현. `apps/mobile`은 6단계라 미생성.
-- **스키마는 아직 확정 아님**(통합기획서 5장 초안). 화면 작업 중 변경 필요하면 문서를 먼저 고칠 것.
-- 미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private, 등급 변경 시 도감번호 재부여 정책.
+**1단계 완료** — 모노레포(Turborepo + pnpm), `apps/admin`(Next 16 / React 19 / Tailwind 4 / shadcn),
+`packages/shared`(상수·디자인 토큰·도메인 모델·zod 스키마), `packages/assets`(Pretendard).
+
+**2단계 진행 중 — 어드민 화면(목업 데이터, DB 미연결)**
+
+| 화면              | 상태 |
+| ----------------- | ---- |
+| 레이아웃·사이드바 | 완료 |
+| 대시보드          | 완료 |
+| 카드 관리         | 완료 |
+| 카드 일괄 업로드  | 완료 |
+| 유저 관리         | 완료 |
+| 경기 관리         | 완료 |
+| 구단 관리         | 미착수 |
+| 통계              | 미착수 |
+| 규칙 확인         | 미착수 |
+| 로그인            | 미착수 |
+
+- 데이터는 `apps/admin/src/lib/repositories`의 fixture 기반 in-memory 구현.
+  4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
+- `apps/mobile`은 6단계라 미생성.
+- **스키마는 아직 확정 아님**(통합기획서 5장). 화면 작업 중 변경 필요하면 **문서를 먼저 고칠 것.**
+  - 지금까지 확정/추가: `cards.image_url` nullable, `cards.deleted_at`, `teams.short_name`,
+    `point_transactions.memo`. `crawl_runs` 테이블은 도입 검토 중.
+- 미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private, `crawl_runs` 도입 여부.

@@ -76,7 +76,7 @@ const DashboardPage = async () => {
           <p className="text-muted-foreground text-xs">
             순증감{' '}
             <span className={netPoints >= 0 ? 'text-success' : 'text-destructive'}>
-              {netPoints >= 0 ? '+' : '−'}
+              {netPoints >= 0 ? '+' : '\u2212'}
               {formatNumber(Math.abs(netPoints))}p
             </span>
           </p>

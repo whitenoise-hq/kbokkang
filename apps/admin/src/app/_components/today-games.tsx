@@ -26,9 +26,8 @@ const TeamLabel = ({ team, align }: { team: Team | undefined; align: 'left' | 'r
 )
 
 /**
- * 오늘 경기.
- * 원정 @ 홈을 좌우 대칭으로 배치하고 가운데에 스코어(또는 시작 시각)를 둔다.
- * 상태는 색이 있는 배지로 표시해 집계중·경기중이 바로 눈에 띈다.
+ * 오늘 경기 (대시보드).
+ * 폭이 좁은 카드라 요약만 보여주고, 자세한 건 경기 관리 화면에서 본다.
  */
 export const TodayGames = ({
   games,
@@ -68,7 +67,7 @@ export const TodayGames = ({
             return (
               <Link
                 key={game.id}
-                href="/games"
+                href={`/games/${game.id}`}
                 className="hover:bg-muted/60 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
               >
                 <TeamLabel team={teamOf(game.awayTeamId)} align="left" />

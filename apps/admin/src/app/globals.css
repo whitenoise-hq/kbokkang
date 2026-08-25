@@ -136,6 +136,35 @@
 }
 
 /**
+ * 포커스 표시 제거.
+ *
+ * @layer 밖에 두어 utilities 레이어(focus-visible:ring-*, focus-visible:border-ring)를
+ * !important 없이 덮는다. 레이어 없는 규칙이 모든 레이어보다 우선한다.
+ *
+ * ⚠️ 키보드(Tab) 탐색 시 현재 위치를 알 수 없게 된다. 단독 운영자용 어드민 전제.
+ * 되살리려면 이 블록만 삭제하면 되고, 얇게 쓰려면 outline 값만 조정한다.
+ */
+*:focus,
+*:focus-visible {
+  outline: none;
+  /* Tailwind 가 box-shadow 로 합성하는 ring 변수를 무효화 (다른 그림자는 유지) */
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+/* 포커스 시 테두리가 파랗게 바뀌는 것(border-ring)도 제거 */
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+[data-slot='select-trigger']:focus,
+[data-slot='select-trigger']:focus-visible,
+[data-slot='input']:focus,
+[data-slot='input']:focus-visible {
+  border-color: var(--input);
+}
+
+/**
  * 애니메이션 — hatch-it 규격에 맞춘다.
  * 과하지 않게, 빠르고 자연스럽게(디자인 가이드 7장: 200~300ms).
  */
