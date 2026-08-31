@@ -5,7 +5,9 @@ import {
   dexNoSchema,
   drawRequestSchema,
   gameSettleSchema,
+  nicknameSchema,
   pointAdjustSchema,
+  profileUpdateSchema,
   predictionInputSchema,
   teamUpdateSchema,
 } from './schemas'
@@ -143,6 +145,48 @@ describe('credentialsSchema', () => {
   it('8자 미만 비밀번호를 거부한다', () => {
     expect(credentialsSchema.safeParse({ ...valid, password: '1234567' }).success).toBe(false)
     expect(credentialsSchema.safeParse({ ...valid, password: '12345678' }).success).toBe(true)
+  })
+})
+
+describe('nicknameSchema', () => {
+  it('한글·영문·숫자를 허용한다', () => {
+    for (const value of ['크보덕후', 'master', 'KBO2026', '홈런왕1']) {
+      expect(nicknameSchema.safeParse(value).success).toBe(true)
+    }
+  })
+
+  it('앞뒤 공백을 제거한다', () => {
+    expect(nicknameSchema.parse('  크보덕후  ')).toBe('크보덕후')
+  })
+
+  it('길이 범위를 벗어나면 거부한다', () => {
+    expect(nicknameSchema.safeParse('가').success).toBe(false)
+    expect(nicknameSchema.safeParse('가나').success).toBe(true)
+    expect(nicknameSchema.safeParse('가'.repeat(12)).success).toBe(true)
+    expect(nicknameSchema.safeParse('가'.repeat(13)).success).toBe(false)
+  })
+
+  it('공백·특수문자·단독 자모를 거부한다', () => {
+    expect(nicknameSchema.safeParse('크보 덕후').success).toBe(false)
+    expect(nicknameSchema.safeParse('크보!').success).toBe(false)
+    expect(nicknameSchema.safeParse('크보_덕후').success).toBe(false)
+    expect(nicknameSchema.safeParse('ㅋㅋㅋ').success).toBe(false)
+    expect(nicknameSchema.safeParse('😀😀').success).toBe(false)
+  })
+})
+
+describe('profileUpdateSchema', () => {
+  it('응원팀 미선택을 허용한다(기본 null)', () => {
+    expect(profileUpdateSchema.parse({ nickname: '크보덕후' }).favoriteTeamId).toBeNull()
+  })
+
+  it('응원팀 id 는 양의 정수만 허용한다', () => {
+    expect(profileUpdateSchema.safeParse({ nickname: '크보덕후', favoriteTeamId: 3 }).success).toBe(
+      true,
+    )
+    expect(profileUpdateSchema.safeParse({ nickname: '크보덕후', favoriteTeamId: 0 }).success).toBe(
+      false,
+    )
   })
 })
 

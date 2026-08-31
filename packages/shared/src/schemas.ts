@@ -108,3 +108,32 @@ export const credentialsSchema = z.object({
 })
 
 export type Credentials = z.infer<typeof credentialsSchema>
+
+/**
+ * 닉네임 규칙 — 앱 온보딩과 설정(수정)에서 공용.
+ * DB 에도 같은 제약이 걸려 있다(users_nickname_length / users_nickname_format).
+ * 규칙을 바꾸면 스키마 마이그레이션도 함께 고쳐야 한다.
+ */
+export const NICKNAME_MIN_LENGTH = 2
+export const NICKNAME_MAX_LENGTH = 12
+
+/** 한글 완성형·영문·숫자만. 단독 자모(ㄱ, ㅏ)와 공백·특수문자는 제외한다 */
+export const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9]+$/
+
+export const nicknameSchema = z
+  .string()
+  .trim()
+  .min(NICKNAME_MIN_LENGTH, `닉네임은 ${String(NICKNAME_MIN_LENGTH)}자 이상이어야 합니다`)
+  .max(NICKNAME_MAX_LENGTH, `닉네임은 ${String(NICKNAME_MAX_LENGTH)}자 이하여야 합니다`)
+  .regex(NICKNAME_PATTERN, '한글·영문·숫자만 사용할 수 있습니다')
+
+/**
+ * 프로필 입력 — 온보딩과 설정에서 같은 스키마를 쓴다.
+ * 응원팀은 nullable(미선택 상태가 존재). 온보딩 화면에서는 UI 가 선택을 요구한다.
+ */
+export const profileUpdateSchema = z.object({
+  nickname: nicknameSchema,
+  favoriteTeamId: z.number().int().positive().nullable().default(null),
+})
+
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>
