@@ -6,6 +6,7 @@ import {
   gameSettleSchema,
   pointAdjustSchema,
   predictionInputSchema,
+  teamUpdateSchema,
 } from './schemas'
 
 const GAME_ID = '4f8c1b1e-2c3d-4a5b-9c8d-7e6f5a4b3c2d'
@@ -116,6 +117,36 @@ describe('gameSettleSchema', () => {
 
   it('스코어가 빠지면 거부한다', () => {
     expect(gameSettleSchema.safeParse({ ...base, homeScore: 5 }).success).toBe(false)
+  })
+})
+
+describe('teamUpdateSchema', () => {
+  const valid = { id: 1, name: 'KIA 타이거즈', shortName: 'KIA', color: '#EA0029' }
+
+  it('로고 없이도 저장할 수 있다(미등록 시 팀 컬러로 대체)', () => {
+    expect(teamUpdateSchema.parse(valid).logoUrl).toBeNull()
+  })
+
+  it('#RRGGBB 만 허용하고 축약형 #RGB 는 거부한다', () => {
+    expect(teamUpdateSchema.safeParse({ ...valid, color: '#EA0029' }).success).toBe(true)
+    expect(teamUpdateSchema.safeParse({ ...valid, color: '#ea0029' }).success).toBe(true)
+    expect(teamUpdateSchema.safeParse({ ...valid, color: '#E02' }).success).toBe(false)
+    expect(teamUpdateSchema.safeParse({ ...valid, color: 'EA0029' }).success).toBe(false)
+    expect(teamUpdateSchema.safeParse({ ...valid, color: 'red' }).success).toBe(false)
+  })
+
+  it('빈 팀명·빈 약칭·너무 긴 약칭을 거부한다', () => {
+    expect(teamUpdateSchema.safeParse({ ...valid, name: '  ' }).success).toBe(false)
+    expect(teamUpdateSchema.safeParse({ ...valid, shortName: '' }).success).toBe(false)
+    expect(teamUpdateSchema.safeParse({ ...valid, shortName: '일곱글자약칭' }).success).toBe(true)
+    expect(teamUpdateSchema.safeParse({ ...valid, shortName: '일곱글자가넘음' }).success).toBe(
+      false,
+    )
+  })
+
+  it('id 가 양의 정수가 아니면 거부한다', () => {
+    expect(teamUpdateSchema.safeParse({ ...valid, id: 0 }).success).toBe(false)
+    expect(teamUpdateSchema.safeParse({ ...valid, id: -1 }).success).toBe(false)
   })
 })
 

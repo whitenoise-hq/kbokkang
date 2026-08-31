@@ -76,3 +76,24 @@ export const gameSettleSchema = z.object({
 })
 
 export type GameSettle = z.infer<typeof gameSettleSchema>
+
+/** 팀 컬러 — #RRGGBB 6자리 hex만 허용(축약형 #RGB 금지: 화면마다 해석이 갈림) */
+export const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, '색상은 #RRGGBB 형식이어야 합니다')
+
+/**
+ * 구단 수정 — 어드민 구단 관리.
+ * KBO 10개 구단은 고정이라 생성/삭제는 없고 수정만 한다.
+ */
+export const teamUpdateSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().trim().min(1, '팀명을 입력하세요').max(30),
+  shortName: z.string().trim().min(1, '약칭을 입력하세요').max(6),
+  color: hexColorSchema,
+  /** 로고 참조. null 허용 — 미등록 시 팀 컬러로 대체 표시한다 */
+  logoUrl: z.string().trim().min(1, '로고 경로가 비어 있습니다').nullable().default(null),
+})
+
+export type TeamUpdate = z.infer<typeof teamUpdateSchema>
