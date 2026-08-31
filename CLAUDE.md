@@ -81,13 +81,22 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
   4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
 - `apps/mobile`은 6단계라 미생성.
 
-**다음: 3단계 — 스키마 확정 + Supabase 세팅**
+**Supabase 프로젝트 생성 + 인증 연결 완료**
+
+- 프로젝트 `iwggqsjrkjwkpuakunmc` (Seoul). Data API 켬 / 새 테이블 자동 노출 끔 / 자동 RLS 켬.
+- 로그인·로그아웃·미들웨어 가드가 **실제 Supabase Auth 에 붙어 동작한다**(어드민 기획서 5장).
+- ⚠️ **인증만 실연결.** 카드·유저·경기·구단 데이터는 여전히 fixture(in-memory).
+  스키마가 없으므로 정상 상태다.
+
+**다음: 3단계 — 스키마 확정 + 마이그레이션**
 
 - **앱과 어드민은 같은 Supabase 프로젝트·같은 DB를 쓴다.** 앱이 anon key 로 직접 붙으므로
   **RLS 가 유일한 방어선.** service role key 는 어드민 서버 전용(절대 클라이언트 노출 금지).
 - 운영자 권한은 `auth.users.app_metadata.role`. `users` 테이블에 role 컬럼을 두지 않는다
   (`user_metadata` 는 유저가 수정 가능하므로 권한에 못 쓴다 — 통합기획서 5장 참조).
-  계정 생성 절차와 미들웨어 가드는 어드민 기획서 5장.
+- 자동 RLS 가 켜져 있어 **새 테이블은 만들자마자 전부 거부(fail-closed)** 된다.
+  정책을 안 만들면 쿼리가 빈 결과만 돌아온다 — 버그가 아니다.
+- 새 테이블 자동 노출을 껐으므로 마이그레이션에 **명시적 grant** 가 필요하다.
 - 화면 작업에서 확정/추가된 컬럼: `cards.image_url` nullable, `cards.deleted_at`,
   `teams.short_name`, `point_transactions.memo`. `crawl_runs` 테이블은 도입 검토 중.
 - 트랜잭션 필수 4곳(도감번호 부여·일괄 등록·정산·뽑기)은 통합기획서 5장 표 참조.

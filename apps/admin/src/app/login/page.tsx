@@ -1,10 +1,21 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { LoginForm } from './_components/login-form'
 
 export const metadata: Metadata = {
   title: '로그인 · 크보깡 어드민',
 }
+
+/** 폼이 useSearchParams(redirect·error)를 쓰므로 Suspense 폴백이 필요하다 */
+const FormFallback = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-14 w-full" />
+    <Skeleton className="h-14 w-full" />
+    <Skeleton className="h-9 w-full" />
+  </div>
+)
 
 /**
  * 운영자 로그인 — 어드민 기획서 3.1.
@@ -20,7 +31,9 @@ const LoginPage = () => (
 
       <Card>
         <CardContent>
-          <LoginForm />
+          <Suspense fallback={<FormFallback />}>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
 
