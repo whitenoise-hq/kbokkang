@@ -81,24 +81,37 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
   4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
 - `apps/mobile`은 6단계라 미생성.
 
-**Supabase 프로젝트 생성 + 인증 연결 완료**
+**3단계 완료 — Supabase 세팅 + 스키마 적용 + 인증 연결**
 
 - 프로젝트 `iwggqsjrkjwkpuakunmc` (Seoul). Data API 켬 / 새 테이블 자동 노출 끔 / 자동 RLS 켬.
+- `supabase/migrations/` 적용 완료 — 테이블 9개 + 구단 10팀 seed + Storage 버킷 2개.
+  검증됨: `anon` 은 전 테이블 401 차단, `service_role` 은 정상 접근.
 - 로그인·로그아웃·미들웨어 가드가 **실제 Supabase Auth 에 붙어 동작한다**(어드민 기획서 5장).
-- ⚠️ **인증만 실연결.** 카드·유저·경기·구단 데이터는 여전히 fixture(in-memory).
-  스키마가 없으므로 정상 상태다.
+- ⚠️ **인증만 실연결.** 카드·유저·경기·구단 화면은 여전히 fixture(in-memory)를 읽는다.
+- **마이그레이션 파일은 수정하지 않는다.** 스키마를 바꿔야 하면 통합기획서 5장을 먼저 고치고
+  **새 마이그레이션을 추가**한다.
 
-**다음: 3단계 — 스키마 확정 + 마이그레이션**
+**다음: 4단계 — 어드민을 Supabase 에 연결**
 
-- **앱과 어드민은 같은 Supabase 프로젝트·같은 DB를 쓴다.** 앱이 anon key 로 직접 붙으므로
-  **RLS 가 유일한 방어선.** service role key 는 어드민 서버 전용(절대 클라이언트 노출 금지).
-- 운영자 권한은 `auth.users.app_metadata.role`. `users` 테이블에 role 컬럼을 두지 않는다
-  (`user_metadata` 는 유저가 수정 가능하므로 권한에 못 쓴다 — 통합기획서 5장 참조).
-- 자동 RLS 가 켜져 있어 **새 테이블은 만들자마자 전부 거부(fail-closed)** 된다.
-  정책을 안 만들면 쿼리가 빈 결과만 돌아온다 — 버그가 아니다.
-- 새 테이블 자동 노출을 껐으므로 마이그레이션에 **명시적 grant** 가 필요하다.
-- 화면 작업에서 확정/추가된 컬럼: `cards.image_url` nullable, `cards.deleted_at`,
-  `teams.short_name`, `point_transactions.memo`. `crawl_runs` 테이블은 도입 검토 중.
+- `apps/admin/src/lib/repositories` 의 in-memory 구현을 `supabase` 구현으로 교체.
+  화면 코드는 수정하지 않는다(Repository 경계를 그래서 뒀다).
+- **이미지 업로드에 압축이 필요하다.** Supabase 이미지 변환은 Pro 전용이라 Free 에서는
+  업로드 시점에 압축해야 한다. 카드 150장 원본 PNG = 300~600MB(Free 용량 1GB).
+  클라이언트 canvas → WebP 변환 권장.
 - 트랜잭션 필수 4곳(도감번호 부여·일괄 등록·정산·뽑기)은 통합기획서 5장 표 참조.
 
-미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private, `crawl_runs` 도입 여부.
+**DB 작업 시 주의 — 실제로 걸린 것들**
+
+- **앱과 어드민은 같은 DB를 쓴다.** 앱이 anon key 로 직접 붙으므로 **RLS 가 유일한 방어선.**
+  service role key 는 어드민 서버 전용(절대 클라이언트 노출 금지).
+- 운영자 권한은 `auth.users.app_metadata.role`. `users` 테이블에 role 컬럼을 두지 않는다.
+- 자동 RLS 가 켜져 있어 **새 테이블은 만들자마자 전부 거부(fail-closed)**. 정책을 안 만들면
+  쿼리가 빈 결과만 돌아온다 — 버그가 아니다.
+- 새 테이블 자동 노출을 껐으므로 **`authenticated` 와 `service_role` 양쪽에 명시적 grant** 필요.
+  service_role 은 RLS 를 우회하지만 GRANT 는 별개다(빠뜨리면 전부 403 — 실제로 겪었다).
+- **RLS 는 컬럼을 제한하지 못한다.** 특정 컬럼만 수정 허용은 컬럼 단위 grant 로 한다
+  (`users` 의 points 자가 수정 차단).
+- 생성 컬럼(`generated always as`)에 `timestamptz - interval` 을 쓸 수 없다 — STABLE 이라
+  IMMUTABLE 조건 위반. 트리거를 쓴다.
+
+미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private.
