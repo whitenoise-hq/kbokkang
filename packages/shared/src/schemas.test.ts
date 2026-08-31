@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cardInputSchema,
+  credentialsSchema,
   dexNoSchema,
   drawRequestSchema,
   gameSettleSchema,
@@ -117,6 +118,31 @@ describe('gameSettleSchema', () => {
 
   it('스코어가 빠지면 거부한다', () => {
     expect(gameSettleSchema.safeParse({ ...base, homeScore: 5 }).success).toBe(false)
+  })
+})
+
+describe('credentialsSchema', () => {
+  const valid = { email: 'admin@itall.com', password: 'password123' }
+
+  it('정상 입력을 통과시킨다', () => {
+    expect(credentialsSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('이메일 앞뒤 공백을 제거한다', () => {
+    expect(credentialsSchema.parse({ ...valid, email: '  admin@itall.com  ' }).email).toBe(
+      'admin@itall.com',
+    )
+  })
+
+  it('잘못된 이메일 형식을 거부한다', () => {
+    expect(credentialsSchema.safeParse({ ...valid, email: 'admin' }).success).toBe(false)
+    expect(credentialsSchema.safeParse({ ...valid, email: 'admin@' }).success).toBe(false)
+    expect(credentialsSchema.safeParse({ ...valid, email: '' }).success).toBe(false)
+  })
+
+  it('8자 미만 비밀번호를 거부한다', () => {
+    expect(credentialsSchema.safeParse({ ...valid, password: '1234567' }).success).toBe(false)
+    expect(credentialsSchema.safeParse({ ...valid, password: '12345678' }).success).toBe(true)
   })
 })
 

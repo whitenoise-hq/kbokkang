@@ -56,10 +56,7 @@ const RulesPage = () => {
 
   return (
     <>
-      <PageHeader
-        title="규칙 확인"
-        description="뽑기 확률·포인트·등급 정의. 읽기 전용입니다"
-      />
+      <PageHeader title="규칙 확인" description="뽑기 확률·포인트·등급 정의. 읽기 전용입니다" />
 
       <div className="bg-muted/60 flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
         <Info className="text-muted-foreground size-4 shrink-0" aria-hidden />
@@ -152,9 +149,7 @@ const RulesPage = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-muted-foreground w-16">
-                    {TEN_DRAW_COUNT}연차
-                  </span>
+                  <span className="text-muted-foreground w-16">{TEN_DRAW_COUNT}연차</span>
                   <span className="tabular font-semibold">{formatPoints(DRAW_COST_TEN[type])}</span>
                   <span className="text-success tabular">
                     {formatPercent(discountOf(type), 0)} 할인
@@ -169,9 +164,7 @@ const RulesPage = () => {
 
             <div className="space-y-1.5 border-t pt-4">
               <p className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">
-                  프리미엄 {TEN_DRAW_COUNT}연차 보장
-                </span>
+                <span className="text-muted-foreground">프리미엄 {TEN_DRAW_COUNT}연차 보장</span>
                 <span className="font-semibold">
                   최소 1장 {CARD_GRADE_META[PREMIUM_TEN_GUARANTEE_GRADE].label} 이상
                 </span>
@@ -221,7 +214,8 @@ const RulesPage = () => {
         <CardHeader>
           <CardTitle className="text-base">등급 정의</CardTitle>
           <p className="text-muted-foreground text-xs">
-            도감번호는 등급 접두어 + {DEX_NO_SEQ_DIGITS}자리 (예: {formatDexNo({ grade: 'normal', seq: 1 })})
+            도감번호는 등급 접두어 + {DEX_NO_SEQ_DIGITS}자리 (예:{' '}
+            {formatDexNo({ grade: 'normal', seq: 1 })})
           </p>
         </CardHeader>
 
@@ -284,8 +278,8 @@ const RulesPage = () => {
             값입니다.
           </p>
           <p>
-            &apos;일반 뽑기 대비&apos;는 뽑기 1회 비용({formatPoints(DRAW_COST_SINGLE.normal)})
-            대비 회수율입니다. 판매를 소소한 중복 처리 용도로 두어 포인트가 계속 소모되게 하는
+            &apos;일반 뽑기 대비&apos;는 뽑기 1회 비용({formatPoints(DRAW_COST_SINGLE.normal)}) 대비
+            회수율입니다. 판매를 소소한 중복 처리 용도로 두어 포인트가 계속 소모되게 하는
             설계입니다.
           </p>
           <p>도감의 마지막 {MIN_KEEP_COUNT}장은 판매할 수 없습니다(실수로 도감 비우기 방지).</p>
@@ -332,9 +326,7 @@ const RulesPage = () => {
             <div className="space-y-1.5 border-t pt-3 text-xs">
               <p className="flex items-center gap-2">
                 <span className="text-muted-foreground">예측 마감</span>
-                <span className="font-semibold">
-                  경기 시작 {PREDICT_CLOSE_OFFSET_MINUTES}분 전
-                </span>
+                <span className="font-semibold">경기 시작 {PREDICT_CLOSE_OFFSET_MINUTES}분 전</span>
               </p>
               <p className="text-muted-foreground text-[11px]">
                 마감·정산 판정은 <strong>서버 시각 기준</strong>입니다(폰 시각 조작 방지)

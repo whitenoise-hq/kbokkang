@@ -70,25 +70,26 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 **1단계 완료** — 모노레포(Turborepo + pnpm), `apps/admin`(Next 16 / React 19 / Tailwind 4 / shadcn),
 `packages/shared`(상수·디자인 토큰·도메인 모델·zod 스키마), `packages/assets`(Pretendard).
 
-**2단계 진행 중 — 어드민 화면(목업 데이터, DB 미연결)**
+**2단계 완료 — 어드민 화면 10개(목업 데이터, DB 미연결)**
 
-| 화면              | 상태 |
-| ----------------- | ---- |
-| 레이아웃·사이드바 | 완료 |
-| 대시보드          | 완료 |
-| 카드 관리         | 완료 |
-| 카드 일괄 업로드  | 완료 |
-| 유저 관리         | 완료 |
-| 경기 관리         | 완료 |
-| 구단 관리         | 미착수 |
-| 통계              | 미착수 |
-| 규칙 확인         | 미착수 |
-| 로그인            | 미착수 |
+레이아웃·사이드바 / 대시보드 / 카드 관리 / 카드 일괄 업로드 / 유저 관리 /
+경기 관리 / 구단 관리 / 통계 / 규칙 확인 / 로그인
 
+- 라우트 구조: 사이드바 셸은 `app/(dashboard)/layout.tsx`, 로그인은 그룹 밖(`app/login`).
+  route group 은 URL 에 영향을 주지 않는다.
 - 데이터는 `apps/admin/src/lib/repositories`의 fixture 기반 in-memory 구현.
   4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
 - `apps/mobile`은 6단계라 미생성.
-- **스키마는 아직 확정 아님**(통합기획서 5장). 화면 작업 중 변경 필요하면 **문서를 먼저 고칠 것.**
-  - 지금까지 확정/추가: `cards.image_url` nullable, `cards.deleted_at`, `teams.short_name`,
-    `point_transactions.memo`. `crawl_runs` 테이블은 도입 검토 중.
-- 미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private, `crawl_runs` 도입 여부.
+
+**다음: 3단계 — 스키마 확정 + Supabase 세팅**
+
+- **앱과 어드민은 같은 Supabase 프로젝트·같은 DB를 쓴다.** 앱이 anon key 로 직접 붙으므로
+  **RLS 가 유일한 방어선.** service role key 는 어드민 서버 전용(절대 클라이언트 노출 금지).
+- 운영자 권한은 `auth.users.app_metadata.role`. `users` 테이블에 role 컬럼을 두지 않는다
+  (`user_metadata` 는 유저가 수정 가능하므로 권한에 못 쓴다 — 통합기획서 5장 참조).
+  계정 생성 절차와 미들웨어 가드는 어드민 기획서 5장.
+- 화면 작업에서 확정/추가된 컬럼: `cards.image_url` nullable, `cards.deleted_at`,
+  `teams.short_name`, `point_transactions.memo`. `crawl_runs` 테이블은 도입 검토 중.
+- 트랜잭션 필수 4곳(도감번호 부여·일괄 등록·정산·뽑기)은 통합기획서 5장 표 참조.
+
+미결: KBO 결과 API 조사, 10연차 할인율 확정, 크롤링 레포 public/private, `crawl_runs` 도입 여부.

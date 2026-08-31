@@ -97,3 +97,14 @@ export const teamUpdateSchema = z.object({
 })
 
 export type TeamUpdate = z.infer<typeof teamUpdateSchema>
+
+/**
+ * 로그인 입력. 앱/어드민 공통(둘 다 Supabase Auth 이메일 로그인을 쓴다).
+ * 실제 인증은 서버에서 하고, 이 스키마는 입력 형식만 걸러 불필요한 요청을 줄인다.
+ */
+export const credentialsSchema = z.object({
+  email: z.string().trim().min(1, '이메일을 입력하세요').email('이메일 형식이 올바르지 않습니다'),
+  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
+})
+
+export type Credentials = z.infer<typeof credentialsSchema>
