@@ -45,18 +45,14 @@ export const createCard = async (raw: unknown): Promise<ActionResult> => {
 
 /**
  * 일괄 등록. 도감번호는 배열 순서대로 서버에서 부여된다.
- * 실제 DB 연결 후에는 트랜잭션으로 묶어 부분 실패를 막아야 한다(3단계 검토 항목).
+ * create_cards_bulk RPC 로 한 트랜잭션에 처리한다 — 전부 성공하거나 전부 롤백된다.
  */
 export const createCardsBulk = async (rawList: readonly unknown[]): Promise<ActionResult> => {
   try {
     if (rawList.length === 0) return { ok: false, message: '등록할 카드가 없습니다' }
 
     const inputs = rawList.map(parseInput)
-    const created = []
-
-    for (const input of inputs) {
-      created.push(await repositories.cards.create(input))
-    }
+    const created = await repositories.cards.createMany(inputs)
 
     revalidatePath('/cards')
     revalidatePath('/')

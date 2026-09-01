@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@kbokkang/shared'
 import { publicEnv, serverEnv } from '@/lib/env'
 
 /**
@@ -10,7 +11,7 @@ export const createClient = async () => {
   const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = publicEnv()
   const cookieStore = await cookies()
 
-  return createServerClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  return createServerClient<Database>(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
@@ -39,7 +40,7 @@ export const createAdminClient = () => {
   const { NEXT_PUBLIC_SUPABASE_URL } = publicEnv()
   const { SUPABASE_SERVICE_ROLE_KEY } = serverEnv()
 
-  return createServerClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  return createServerClient<Database>(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     cookies: {
       getAll: () => [],
       setAll: () => {

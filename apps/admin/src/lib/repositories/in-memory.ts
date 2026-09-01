@@ -112,6 +112,14 @@ const cardRepository: CardRepository = {
     return created
   },
 
+  createMany: async (inputs) => {
+    const created = []
+    for (const input of inputs) {
+      created.push(await cardRepository.create(input))
+    }
+    return created
+  },
+
   update: async (id, input) => {
     const target = await cardRepository.findById(id)
     if (target === null) throw new Error(`카드를 찾을 수 없습니다: ${id}`)

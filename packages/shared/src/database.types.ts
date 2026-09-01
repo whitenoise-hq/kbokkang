@@ -504,6 +504,13 @@ export type Database = {
       }
     }
     Functions: {
+      create_cards_bulk: {
+        Args: { items: Json }
+        Returns: {
+          dex_no: string
+          id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_nickname_available: { Args: { candidate: string }; Returns: boolean }
       settle_game: {

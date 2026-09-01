@@ -81,26 +81,39 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
   4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
 - `apps/mobile`은 6단계라 미생성.
 
-**3단계 완료 — Supabase 세팅 + 스키마 적용 + 인증 연결**
+**3·4단계 완료 — Supabase 세팅 + 스키마 + 인증 + 어드민 실연결**
 
 - 프로젝트 `iwggqsjrkjwkpuakunmc` (Seoul). Data API 켬 / 새 테이블 자동 노출 끔 / 자동 RLS 켬.
-- `supabase/migrations/` 적용 완료 — 테이블 9개 + 구단 10팀 seed + Storage 버킷 2개.
-  검증됨: `anon` 은 전 테이블 401 차단, `service_role` 은 정상 접근.
-- 로그인·로그아웃·미들웨어 가드가 **실제 Supabase Auth 에 붙어 동작한다**(어드민 기획서 5장).
-- ⚠️ **인증만 실연결.** 카드·유저·경기·구단 화면은 여전히 fixture(in-memory)를 읽는다.
+- `supabase/migrations/` 7개 적용 — 테이블 9개, 구단 10팀 seed, Storage 버킷 2개,
+  집계 뷰 5개, RPC 4개(`is_admin` `is_nickname_available` `settle_game` `create_cards_bulk`).
+- **어드민 화면 10개가 실제 DB 를 쓴다.** `repositories = supabaseRepositories` 한 줄 교체로
+  전환했고 화면 코드는 수정하지 않았다.
+- 이미지는 클라이언트 canvas 압축 후 Storage 업로드(카드 1200px / 로고 256px, WebP).
 - **마이그레이션 파일은 수정하지 않는다.** 스키마를 바꿔야 하면 통합기획서 5장을 먼저 고치고
   **새 마이그레이션을 추가**한다.
 
-**다음: 4단계 — 어드민을 Supabase 에 연결**
+**현재 데이터 상태**
 
-- `apps/admin/src/lib/repositories` 의 in-memory 구현을 `supabase` 구현으로 교체.
-  화면 코드는 수정하지 않는다(Repository 경계를 그래서 뒀다).
-- **이미지 업로드에 압축이 필요하다.** Supabase 이미지 변환은 Pro 전용이라 Free 에서는
-  업로드 시점에 압축해야 한다. 카드 150장 원본 PNG = 300~600MB(Free 용량 1GB).
-  클라이언트 canvas → WebP 변환 권장.
-- 트랜잭션 필수 4곳(도감번호 부여·일괄 등록·정산·뽑기)은 통합기획서 5장 표 참조.
+- `teams` 만 채워져 있다(seed 10팀). `cards` 는 운영자가 등록, `games` 는 5단계 크롤링이 채운다.
+- 그래서 대시보드·통계가 0 으로 보인다 — 정상이다.
+- fixture 구현(`in-memory.ts`)은 남겨둔다 — 앱 화면(6단계)을 DB 없이 먼저 만들 때 쓴다.
+
+**다음: 5단계 — 크롤링/정산 (GitHub Actions)**
+
+- ⚠️ **선행 조사 필요:** KBO 경기 데이터 소스(공식 사이트 / 네이버 스포츠 / 비공식 API)를
+  먼저 정해야 파서를 쓸 수 있다. 통합기획서 8장 미결 1번.
+- 준비된 것: `games.external_id`(재수집 upsert 키), `crawl_runs`(수집 이력),
+  `settle_game()` RPC(결과 반영+정산), 어드민 크롤링 상태 배너·수동 정산 UI.
+- 크롤러는 service role 로 붙는다.
 
 **DB 작업 시 주의 — 실제로 걸린 것들**
+
+- **`createServerClient<Database>` 제네릭을 빼먹으면 모든 쿼리 결과가 `any` 가 된다.**
+  타입만 생성해두고 제네릭을 안 붙여서 한동안 컬럼명 오타도 통과했다.
+  타입 생성 후 잘못된 컬럼명으로 에러가 나는지 반드시 확인할 것.
+- 집계 뷰는 **`security_invoker = true`** 필수. 기본값은 뷰 소유자 권한으로 동작해 RLS 를 우회한다.
+- **뷰를 추가하면 조인 타입 추론이 깨질 수 있다** — PostgREST 가 뷰에도 FK 관계를 물려줘
+  to-one 조인이 배열로 추론된다. 어드민은 `one()` 헬퍼로 흡수.
 
 - **앱과 어드민은 같은 DB를 쓴다.** 앱이 anon key 로 직접 붙으므로 **RLS 가 유일한 방어선.**
   service role key 는 어드민 서버 전용(절대 클라이언트 노출 금지).

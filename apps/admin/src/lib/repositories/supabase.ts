@@ -8,6 +8,7 @@ import type {
   Game,
   GameFilter,
   GameWithStats,
+  Json,
   PointFlowPoint,
   PointTransaction,
   Team,
@@ -60,6 +61,34 @@ const one = <T>(value: T | readonly T[]): T => {
   const single = Array.isArray(value) ? (value as readonly T[])[0] : (value as T)
   if (single === undefined) throw new Error('조인 결과가 비어 있습니다')
   return single
+}
+
+/**
+ * 최고 연승 — 경기 시작 시각 순으로 정렬해 연속 적중 최대 길이를 센다.
+ * 정산 전(pending)은 아직 결과가 없으므로 연속을 끊지 않고 건너뛴다.
+ */
+const bestStreakOf = (
+  rows: readonly { result: string; games: { start_at: string } | { start_at: string }[] }[],
+): number => {
+  const ordered = rows
+    .map((row) => ({ result: row.result, startAt: one(row.games).start_at }))
+    .toSorted((a, b) => a.startAt.localeCompare(b.startAt))
+
+  let best = 0
+  let current = 0
+
+  for (const row of ordered) {
+    if (row.result === 'pending') continue
+
+    if (row.result === 'win_hit' || row.result === 'score_hit') {
+      current += 1
+      best = Math.max(best, current)
+    } else {
+      current = 0
+    }
+  }
+
+  return best
 }
 
 const RANGE_ERROR = 'PGRST103' // 요청 범위가 결과 범위를 벗어남 — 빈 페이지로 처리한다
@@ -169,6 +198,37 @@ const cardRepository: CardRepository = {
     }
 
     throw new Error('도감번호 부여에 반복 실패했습니다. 잠시 후 다시 시도하세요')
+  },
+
+  /**
+   * 일괄 등록은 RPC(create_cards_bulk)로 한 트랜잭션에 처리한다.
+   * 순차 insert 면 중간 실패 시 앞부분만 등록되어 도감번호에 구멍이 생긴다.
+   */
+  createMany: async (inputs) => {
+    if (inputs.length === 0) return []
+
+    const supabase = await createClient()
+
+    // RPC 인자는 jsonb 라 Json 타입으로 넘겨야 오버로드가 맞는다
+    const items: Json = inputs.map((input) => ({
+      name: input.name,
+      grade: input.grade,
+      type: input.type,
+      imageUrl: input.imageUrl,
+      drawWeight: input.drawWeight,
+      isSeason: input.isSeason,
+    }))
+
+    const { data, error } = await supabase.rpc('create_cards_bulk', { items })
+
+    if (error !== null) throw new Error(`카드 일괄 등록 실패: ${error.message}`)
+
+    // RPC 는 id·dex_no 만 돌려주므로 전체 행을 다시 읽는다
+    const ids = (data ?? []).map((row) => row.id)
+    const { data: rows, error: readError } = await supabase.from('cards').select('*').in('id', ids)
+
+    if (readError !== null) throw new Error(`등록된 카드 조회 실패: ${readError.message}`)
+    return rows.map(toCard).toSorted(byDexNo)
   },
 
   update: async (id, input) => {
@@ -311,7 +371,7 @@ const userRepository: UserRepository = {
         .eq('user_id', id)
         .order('created_at', { ascending: false })
         .limit(200),
-      supabase.from('predictions').select('result').eq('user_id', id),
+      supabase.from('predictions').select('result, games!inner(start_at)').eq('user_id', id),
       supabase.from('cards').select('grade').is('deleted_at', null),
     ])
 
@@ -379,8 +439,7 @@ const userRepository: UserRepository = {
         totalPredictions: results.length,
         winHits: results.filter((row) => row.result === 'win_hit').length,
         scoreHits: results.filter((row) => row.result === 'score_hit').length,
-        // 연승은 경기 순서가 필요해 별도 계산이 든다. 4단계 범위 밖으로 두고 0 으로 표시한다.
-        bestStreak: 0,
+        bestStreak: bestStreakOf(results),
       },
     }
 

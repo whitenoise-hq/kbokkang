@@ -43,6 +43,8 @@ export interface CardRepository {
   /** 도감번호 자동 부여용 — 해당 등급의 기존 카드 수(삭제분 포함) */
   countByGrade(grade: CardGrade): Promise<number>
   create(input: CardInput): Promise<Card>
+  /** 일괄 등록. 전부 성공하거나 전부 롤백된다(중간 실패 시 도감번호에 구멍이 생기면 안 된다) */
+  createMany(inputs: readonly CardInput[]): Promise<readonly Card[]>
   update(id: string, input: CardInput): Promise<Card>
   /** soft delete. 보유자가 있으면 하드 삭제하지 않는다 */
   softDelete(id: string): Promise<void>
