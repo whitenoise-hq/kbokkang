@@ -38,6 +38,18 @@ export interface Prediction {
   readonly createdAt: string
 }
 
+/** 크롤링 실행 이력 — 통합기획서 5장 `crawl_runs` 대응 */
+export interface CrawlRun {
+  readonly id: string
+  /** 수집 대상 날짜 (YYYY-MM-DD) */
+  readonly targetDate: string
+  readonly runAt: string
+  readonly success: boolean
+  readonly gamesFound: number
+  readonly gamesSettled: number
+  readonly error: string | null
+}
+
 /** 경기 목록 필터 */
 export interface GameFilter {
   /** YYYY-MM-DD. null이면 전체 */

@@ -3,6 +3,7 @@ import type {
   CardFilter,
   CardGrade,
   CardSpreadRow,
+  CrawlRun,
   DashboardSummary,
   DrawStats,
   Game,
@@ -250,6 +251,22 @@ const gameRepository: GameRepository = {
 
     games = games.map((game) => (game.id === id ? updated : game))
     return Promise.resolve<Game>(updated)
+  },
+
+  /** fixture 에서는 그날 경기가 있으면 크롤러가 정상 실행된 것으로 본다 */
+  latestRun: (date) => {
+    const dayGames = games.filter((game) => game.gameDate === date)
+    if (dayGames.length === 0) return Promise.resolve(null)
+
+    return Promise.resolve<CrawlRun>({
+      id: `run-${date}`,
+      targetDate: date,
+      runAt: `${date}T12:00:00.000Z`,
+      success: true,
+      gamesFound: dayGames.length,
+      gamesSettled: dayGames.filter((game) => game.status === 'settled').length,
+      error: null,
+    })
   },
 }
 

@@ -27,10 +27,11 @@ const GamesPage = async ({ searchParams }: { searchParams: Promise<SearchParams>
   const date = params.date !== undefined && ISO_DATE.test(params.date) ? params.date : today
   const status = params.status !== undefined && isGameStatus(params.status) ? params.status : null
 
-  const [dayGames, teams] = await Promise.all([
+  const [dayGames, teams, crawlRun] = await Promise.all([
     // 크롤링 상태는 상태 필터와 무관하게 그날 전체를 봐야 하므로 status 없이 받는다
     repositories.games.list({ date, status: null }, { page: 1, pageSize: ONE_DAY_LIMIT }),
     repositories.teams.list(),
+    repositories.games.latestRun(date),
   ])
 
   const visibleGames =
@@ -43,7 +44,7 @@ const GamesPage = async ({ searchParams }: { searchParams: Promise<SearchParams>
         description={`${formatDateWithWeekday(date)}${date === today ? ' · 오늘' : ''}`}
       />
 
-      <CrawlStatus date={date} games={dayGames.items} />
+      <CrawlStatus date={date} games={dayGames.items} run={crawlRun} />
 
       <DateNavigator date={date} today={today} />
 

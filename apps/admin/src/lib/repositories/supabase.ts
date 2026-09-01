@@ -551,6 +551,30 @@ const gameRepository: GameRepository = {
     return data.map(toPrediction)
   },
 
+  latestRun: async (date) => {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('crawl_runs')
+      .select('*')
+      .eq('target_date', date)
+      .order('run_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error !== null) throw new Error(`크롤링 이력 조회 실패: ${error.message}`)
+    if (data === null) return null
+
+    return {
+      id: data.id,
+      targetDate: data.target_date,
+      runAt: data.run_at,
+      success: data.success,
+      gamesFound: data.games_found,
+      gamesSettled: data.games_settled,
+      error: data.error,
+    }
+  },
+
   /** 정산은 여러 테이블을 한 트랜잭션으로 묶어야 하므로 RPC 를 쓴다(service role 전용) */
   settle: async (id, homeScore, awayScore) => {
     const supabase = createAdminClient()

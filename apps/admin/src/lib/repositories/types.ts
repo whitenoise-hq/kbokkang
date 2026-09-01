@@ -1,4 +1,5 @@
 import type {
+  CrawlRun,
   Card,
   CardFilter,
   CardInput,
@@ -70,6 +71,13 @@ export interface GameRepository {
   predictionsOf(gameId: string): Promise<readonly Prediction[]>
   /** 수동 정산 — 크롤링 실패 시 운영자가 결과 입력 */
   settle(id: string, homeScore: number, awayScore: number): Promise<Game>
+  /**
+   * 해당 날짜의 마지막 크롤링 실행 이력. 실행 기록이 없으면 null.
+   *
+   * "경기 없는 날"과 "크롤러가 안 돌았다"를 구분하려면 이게 필요하다 —
+   * games 가 비어 있다는 사실만으로는 판단할 수 없다.
+   */
+  latestRun(date: string): Promise<CrawlRun | null>
 }
 
 export interface StatsRepository {
