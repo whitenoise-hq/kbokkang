@@ -36,5 +36,12 @@ export default tseslint.config(
       eqeqeq: ['error', 'always'],
     },
   },
+  {
+    // 크롤러는 GitHub Actions 잡이다. 로그가 유일한 관측 수단이라 info 를 허용한다.
+    files: ['apps/crawler/src/**/*.ts'],
+    rules: {
+      'no-console': ['error', { allow: ['info', 'warn', 'error'] }],
+    },
+  },
   prettier,
 )

@@ -1,0 +1,44 @@
+name: 경기 일정 수집
+
+# 매주 월요일 KST 10:00 = UTC 01:00 (월)
+# 실행일(월)을 포함해 그 주 일요일까지 7일치를 가져온다.
+# 월요일도 개막 주·시즌 막바지엔 경기가 있으므로 실행일을 범위에 넣는다.
+on:
+  schedule:
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '수집 시작일 (YYYY-MM-DD). 비우면 오늘부터 7일치. 빠진 주를 다시 채울 때 지정한다.'
+        required: false
+        type: string
+
+# 같은 워크플로가 겹쳐 돌면 같은 경기를 두 번 upsert 한다. 앞 실행이 끝날 때까지 대기시킨다
+# (cancel 하면 그 주 일정이 아예 안 채워질 수 있다).
+concurrency:
+  group: kbo-schedule
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 일정 수집
+        working-directory: apps/crawler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm schedule -- --date=${{ inputs.date }}

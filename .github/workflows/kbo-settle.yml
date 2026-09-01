@@ -1,0 +1,44 @@
+name: 경기 결과 수집 · 정산
+
+# UTC 01:00~15:30 30분 간격 = KST 10:00~24:30
+# 경기는 보통 KST 14:00 / 18:30 시작이고 3~4시간이면 끝나므로 자정 전에 다 정산된다.
+# 오늘 경기가 전부 정산되면 스크립트가 소스를 부르지 않고 즉시 끝난다(경기 없는 날도 동일).
+on:
+  schedule:
+    - cron: '0,30 1-15 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '정산 대상 날짜 (YYYY-MM-DD). 비우면 오늘. 수집이 멈췄던 날의 복구용.'
+        required: false
+        type: string
+
+# 정산은 포인트를 지급한다. 두 실행이 겹치면 같은 경기를 두 번 정산할 수 있다.
+# settle_game() 이 for update 락 + status 검사로 막지만, 워크플로 단계에서도 막는다.
+concurrency:
+  group: kbo-settle
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 결과 수집 · 정산
+        working-directory: apps/crawler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: pnpm settle -- --date=${{ inputs.date }}
