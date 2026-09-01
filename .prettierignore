@@ -11,3 +11,6 @@ CLAUDE.md
 
 # Next.js 자동 생성
 next-env.d.ts
+
+# supabase gen types 생성물 — 직접 수정 금지
+packages/shared/src/database.types.ts

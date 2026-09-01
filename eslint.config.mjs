@@ -4,7 +4,15 @@ import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/.turbo/**', '**/.expo/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/dist/**',
+      '**/.turbo/**',
+      '**/.expo/**',
+      // supabase gen types 생성물
+      '**/database.types.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
