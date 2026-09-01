@@ -11,7 +11,19 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      // Turborepo 2.x 는 strict env 모드가 기본이다. `NEXT_PUBLIC_*` 은 Next.js 프레임워크
+      // 추론으로 자동 통과되지만, 그 외 변수는 여기 선언해야 태스크에 전달된다.
+      //
+      // 명시하는 이유는 두 가지다:
+      // 1. 프레임워크 추론에 의존하지 않는다 — 접두어 규칙이 바뀌어도 안전하다.
+      // 2. 값이 캐시 해시에 포함된다. 선언 전에는 `.env` 가 있을 때 만든 빌드가
+      //    환경변수 없는 상태에서도 캐시 히트로 복원됐다(실제로 겪었다).
+      "env": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ]
     },
     "lint": {
       "dependsOn": ["^build"]
