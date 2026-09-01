@@ -87,6 +87,7 @@ export const TeamEditDialog = ({ team }: { team: Team }) => {
           <div className="space-y-2">
             <Label>로고</Label>
             <LogoPicker
+              teamId={team.id}
               value={logoUrl}
               color={colorValid ? color : team.color}
               onChange={setLogoUrl}

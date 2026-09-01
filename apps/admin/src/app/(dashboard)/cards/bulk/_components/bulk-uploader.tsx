@@ -28,6 +28,8 @@ import { GradeBadge } from '@/components/grade-badge'
 import { EmptyState } from '@/components/empty-state'
 import { cn } from '@/lib/utils'
 import { createCardsBulk } from '../../actions'
+import { CARD_IMAGE_OPTIONS, compressImage, type CompressedImage } from '@/lib/image/compress'
+import { uploadCardImage } from '@/lib/storage/actions'
 
 const MAX_BYTES = 5 * 1024 * 1024
 const MAX_FILES = 50
@@ -35,11 +37,15 @@ const MAX_FILES = 50
 interface Draft {
   readonly key: string
   readonly fileName: string
-  readonly dataUrl: string
+  /** 압축 결과. 업로드는 저장 시점에 한다(제외한 파일을 올릴 필요가 없다) */
+  readonly image: CompressedImage
   readonly name: string
   readonly grade: CardGrade
   readonly type: CardType
 }
+
+/** 동시 업로드 수. 50장을 순차로 올리면 너무 느리고, 무제한이면 브라우저·서버가 버겁다 */
+const UPLOAD_CONCURRENCY = 4
 
 /** 파일명에서 카드 이름 후보 추출 — 확장자와 앞쪽 번호 접두어 제거 */
 const nameFromFile = (fileName: string): string =>
@@ -62,6 +68,7 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
   const [drafts, setDrafts] = useState<readonly Draft[]>([])
   const [dragging, setDragging] = useState(false)
   const [rejected, setRejected] = useState<readonly string[]>([])
+  const [uploaded, setUploaded] = useState(0)
 
   /** 일괄 지정용 기본값 — 이후 개별 수정 가능 */
   const [defaultGrade, setDefaultGrade] = useState<CardGrade>('normal')
@@ -94,30 +101,30 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
         return
       }
 
-      accepted.slice(0, room).forEach((file) => {
-        // FileReader 완료 순서가 비결정적이므로 key는 단조 증가 카운터로 만든다.
-        keySeq.current += 1
-        const key = `draft-${String(keySeq.current)}`
+      void Promise.all(
+        accepted.slice(0, room).map(async (file) => {
+          keySeq.current += 1
+          const key = `draft-${String(keySeq.current)}`
 
-        const reader = new FileReader()
-        reader.onload = () => {
-          if (typeof reader.result !== 'string') return
-
-          setDrafts((prev) => [
-            ...prev,
-            {
-              key,
-              fileName: file.name,
-              dataUrl: reader.result as string,
-              name: nameFromFile(file.name),
-              grade: defaultGrade,
-              type: defaultType,
-            },
-          ])
-        }
-        reader.onerror = () => toast.error(`${file.name} 을 읽지 못했습니다`)
-        reader.readAsDataURL(file)
-      })
+          try {
+            const image = await compressImage(file, CARD_IMAGE_OPTIONS)
+            setDrafts((prev) => [
+              ...prev,
+              {
+                key,
+                fileName: file.name,
+                image,
+                name: nameFromFile(file.name),
+                grade: defaultGrade,
+                type: defaultType,
+              },
+            ])
+          } catch (cause) {
+            console.error('이미지 압축 실패:', cause)
+            toast.error(`${file.name} 을 처리하지 못했습니다`)
+          }
+        }),
+      )
     },
     [defaultGrade, defaultType, drafts.length],
   )
@@ -155,12 +162,51 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
 
   const submit = () => {
     startTransition(async () => {
+      setUploaded(0)
+
+      // 동시 업로드 수를 제한하고, 결과 URL 을 원래 순서대로 채운다(도감번호가 순서대로 부여되므로)
+      const urls: (string | null)[] = Array.from({ length: drafts.length }, () => null)
+      let cursor = 0
+
+      const worker = async () => {
+        while (cursor < drafts.length) {
+          const index = cursor
+          cursor += 1
+          const draft = drafts[index]
+          if (draft === undefined) continue
+
+          const formData = new FormData()
+          formData.append(
+            'file',
+            new File([draft.image.blob], `${draft.name}.webp`, { type: draft.image.blob.type }),
+          )
+
+          const uploadResult = await uploadCardImage(formData)
+          if (!uploadResult.ok || uploadResult.url === undefined) {
+            throw new Error(`${draft.fileName}: ${uploadResult.message}`)
+          }
+
+          urls[index] = uploadResult.url
+          setUploaded((prev) => prev + 1)
+        }
+      }
+
+      try {
+        await Promise.all(
+          Array.from({ length: Math.min(UPLOAD_CONCURRENCY, drafts.length) }, worker),
+        )
+      } catch (cause) {
+        console.error('일괄 업로드 실패:', cause)
+        toast.error(cause instanceof Error ? cause.message : '이미지 업로드에 실패했습니다')
+        return
+      }
+
       const result = await createCardsBulk(
-        drafts.map((draft) => ({
+        drafts.map((draft, index) => ({
           name: draft.name,
           grade: draft.grade,
           type: draft.type,
-          imageUrl: draft.dataUrl,
+          imageUrl: urls[index] ?? null,
           drawWeight: 1,
           isSeason: false,
         })),
@@ -323,7 +369,11 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
                     className="aspect-[3/4] w-10 shrink-0 overflow-hidden rounded border-2"
                     style={{ borderColor: `${CARD_GRADE_META[draft.grade].color}66` }}
                   >
-                    <img src={draft.dataUrl} alt={draft.name} className="size-full object-cover" />
+                    <img
+                      src={draft.image.previewUrl}
+                      alt={draft.name}
+                      className="size-full object-cover"
+                    />
                   </div>
 
                   <span className="tabular w-14 shrink-0 font-mono text-xs font-semibold">
@@ -409,7 +459,9 @@ export const BulkUploader = ({ countByGrade }: { countByGrade: Record<CardGrade,
           </div>
 
           <Button onClick={submit} disabled={pending || invalidCount > 0}>
-            {pending ? '등록 중…' : `${drafts.length}장 등록`}
+            {pending
+              ? `업로드 중… ${String(uploaded)}/${String(drafts.length)}`
+              : `${drafts.length}장 등록`}
           </Button>
         </div>
       )}
