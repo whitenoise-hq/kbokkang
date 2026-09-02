@@ -4,19 +4,22 @@ import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { repositories, DEFAULT_PAGE_SIZE } from '@/lib/repositories'
-import { formatNumber, formatPoints, formatPercent, toPercent } from '@/lib/format'
+import { repositories } from '@/lib/repositories'
+import { formatNumber, formatPoints, formatPercent, todayInKst, toPercent } from '@/lib/format'
 import { GradeDistribution } from './_components/grade-distribution'
 import { TodayGames } from './_components/today-games'
 
+/** 하루 최대 5경기라 페이지네이션 없이 한 번에 받는다 */
+const ONE_DAY_LIMIT = 20
+
 /** 대시보드 — 어드민 기획서 3.2 */
 const DashboardPage = async () => {
+  const today = todayInKst()
+
   const [summary, todayGames, teams] = await Promise.all([
     repositories.stats.dashboard(),
-    repositories.games.list(
-      { date: '2026-08-25', status: null },
-      { page: 1, pageSize: DEFAULT_PAGE_SIZE },
-    ),
+    // 상단 스탯 카드의 "오늘 경기" 도 todayInKst() 기준이다. 두 값이 어긋나면 안 된다.
+    repositories.games.list({ date: today, status: null }, { page: 1, pageSize: ONE_DAY_LIMIT }),
     repositories.teams.list(),
   ])
 
