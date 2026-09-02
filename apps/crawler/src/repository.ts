@@ -121,25 +121,53 @@ export const upsertGames = async (
   return { upserted: rows.length, skipped }
 }
 
-/** 정산 대상 — 결과가 확정됐는데 아직 우리 쪽 정산이 안 된 경기 */
+export interface SettleTarget {
+  readonly id: string
+  readonly external_id: string | null
+  readonly game_date: string
+  readonly home_score: number
+  readonly away_score: number
+}
+
+/**
+ * 정산 대상 — 결과가 확정됐는데 아직 우리 쪽 정산이 안 된 경기.
+ *
+ * **날짜 범위로 조회한다(자기복구).** 하루만 보면 그 하루의 실행이 전부 실패했을 때
+ * 영구 미정산으로 남는다. 실제로 그렇게 됐다: GitHub Actions 가 예정된 실행 약 30회 중
+ * 2회만 만들었고(schedule 은 부하 시 드롭된다), 그 사이에 끝난 경기가 `live` 로 멈췄다.
+ *
+ * 범위로 훑으면 실행이 몇 번 빠져도 다음 실행이 주워간다. 이미 정산된 경기는 제외되므로
+ * 추가 비용은 조회 한 번뿐이다.
+ */
 export const gamesToSettle = async (
   supabase: Client,
-  gameDate: string,
-): Promise<readonly { id: string; external_id: string | null; home_score: number; away_score: number }[]> => {
+  fromDate: string,
+  toDate: string,
+): Promise<readonly SettleTarget[]> => {
   const { data, error } = await supabase
     .from('games')
-    .select('id, external_id, home_score, away_score')
-    .eq('game_date', gameDate)
+    .select('id, external_id, game_date, home_score, away_score')
+    .gte('game_date', fromDate)
+    .lte('game_date', toDate)
     .neq('status', 'settled')
     .not('home_score', 'is', null)
     .not('away_score', 'is', null)
+    .order('game_date')
 
   if (error !== null) throw new Error(`정산 대상 조회 실패: ${error.message}`)
 
   return (data ?? []).flatMap((row) =>
     row.home_score === null || row.away_score === null
       ? []
-      : [{ id: row.id, external_id: row.external_id, home_score: row.home_score, away_score: row.away_score }],
+      : [
+          {
+            id: row.id,
+            external_id: row.external_id,
+            game_date: row.game_date,
+            home_score: row.home_score,
+            away_score: row.away_score,
+          },
+        ],
   )
 }
 

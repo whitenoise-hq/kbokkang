@@ -36,6 +36,14 @@ describe('shiftDate', () => {
   it('연 경계를 넘긴다', () => {
     expect(shiftDate('2026-12-29', 6)).toBe('2027-01-04')
   })
+
+  it('음수로 과거로 이동한다 — 정산 잡의 조회 시작일을 이렇게 구한다', () => {
+    expect(shiftDate('2026-09-02', -2)).toBe('2026-08-31')
+  })
+
+  it('음수로 월 경계를 거꾸로 넘긴다', () => {
+    expect(shiftDate('2026-03-01', -2)).toBe('2026-02-27')
+  })
 })
 
 describe('dateRange', () => {
