@@ -20,8 +20,7 @@ import type { CardGrade } from '@kbokkang/shared'
 
 /**
  * 데이터 접근 경계. 화면은 이 인터페이스만 의존한다.
- * 지금은 fixture 기반 in-memory 구현이고, 스키마 확정(3단계) 후
- * Supabase 구현으로 교체하면 화면 코드는 수정하지 않는다.
+ * 구현은 `supabase.ts` 하나다.
  */
 
 export interface Paged<T> {

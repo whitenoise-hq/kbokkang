@@ -77,8 +77,9 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 
 - 라우트 구조: 사이드바 셸은 `app/(dashboard)/layout.tsx`, 로그인은 그룹 밖(`app/login`).
   route group 은 URL 에 영향을 주지 않는다.
-- 데이터는 `apps/admin/src/lib/repositories`의 fixture 기반 in-memory 구현.
-  4단계에서 `supabase` 구현으로 교체하면 화면 코드는 수정하지 않는다.
+- 당시 데이터는 `repositories` 의 fixture 기반 in-memory 구현이었다.
+  4단계에서 `supabase` 구현으로 교체했고 화면 코드는 수정하지 않았다.
+  **더미데이터는 5단계 이후 삭제했다** — 실 DB 가 붙었고 아무 곳도 참조하지 않았다.
 - `apps/mobile`은 6단계라 미생성.
 
 **3·4단계 완료 — Supabase 세팅 + 스키마 + 인증 + 어드민 실연결**
@@ -97,7 +98,9 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - `teams`(seed 10팀) / `games`(크롤러가 채움) / `crawl_runs` 는 데이터가 있다.
 - `cards` 는 운영자가 등록해야 하고 `users` 는 앱(6단계) 이후에 생긴다.
 - 그래서 카드·유저 관련 통계가 0 으로 보인다 — 정상이다.
-- fixture 구현(`in-memory.ts`)은 남겨둔다 — 앱 화면(6단계)을 DB 없이 먼저 만들 때 쓴다.
+- **더미데이터(`in-memory.ts`, `fixtures/`)는 삭제했다.** 구현은 `supabase.ts` 하나다.
+  앱 화면(6단계)을 DB 없이 만들 필요가 생기면 그때 앱 쪽에 따로 만든다 —
+  어드민 fixture 를 되살리지 않는다(실 DB 와 두 갈래로 갈라져 화면이 어긋난다).
 
 **5단계 완료 — 크롤링/정산 (`apps/crawler` + GitHub Actions)**
 
