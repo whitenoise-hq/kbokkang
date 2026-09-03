@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { targetDate } from './args'
-import { todayKst } from './date'
+import { todayKst } from '../../../supabase/functions/_shared/date.ts'
 
 describe('targetDate', () => {
   it('인자가 없으면 오늘(KST)이다', () => {

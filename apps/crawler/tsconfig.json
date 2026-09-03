@@ -4,7 +4,9 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "noEmit": true
+    "noEmit": true,
+    // Deno 는 상대 임포트에 확장자를 요구한다. 같은 파일을 Node 에서도 쓰므로 허용한다.
+    "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "../../supabase/functions/_shared/**/*.ts"]
 }

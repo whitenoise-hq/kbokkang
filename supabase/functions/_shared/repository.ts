@@ -4,10 +4,9 @@ import {
   isCancelled,
   looksLikeRegularGameId,
   toGameStatus,
-  type Database,
-} from '@kbokkang/shared'
-import { env } from './env'
-import type { SourceGame } from './sources/naver'
+} from './kbo-source.ts'
+import type { Database } from './database.types.ts'
+import type { SourceGame } from './naver.ts'
 
 /**
  * 크롤러의 DB 접근.
@@ -16,14 +15,18 @@ import type { SourceGame } from './sources/naver'
  * 유저 정책으로 막혀 있는 작업이다. RLS 를 우회하므로 이 코드는 서버에서만 돈다.
  */
 
-type Client = SupabaseClient<Database>
+export type Client = SupabaseClient<Database>
 
-export const client = (): Client => {
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = env()
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+/**
+ * service role 클라이언트.
+ *
+ * 설정을 **인자로 받는다** — 이 파일은 Node(로컬 CLI)와 Deno(Edge Function) 양쪽에서
+ * 쓰이므로 `process.env` 든 `Deno.env` 든 여기서 읽으면 한쪽이 깨진다.
+ */
+export const createServiceClient = (url: string, serviceRoleKey: string): Client =>
+  createClient<Database>(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
-}
 
 /** 구단 약칭 → id. `teams.id` 를 코드에 하드코딩하지 않기 위해 매번 조회한다. */
 export const teamIdsByShortName = async (supabase: Client): Promise<Map<string, number>> => {

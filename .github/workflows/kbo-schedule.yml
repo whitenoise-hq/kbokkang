@@ -1,20 +1,17 @@
-name: 경기 일정 수집
+name: 경기 일정 수집 (수동 복구용)
 
-# 매주 월요일 KST 10:07 = UTC 01:07 (월). 정시를 피한 이유는 kbo-settle.yml 주석 참조.
-# 실행일(월)을 포함해 그 주 일요일까지 7일치를 가져온다.
-# 월요일도 개막 주·시즌 막바지엔 경기가 있으므로 실행일을 범위에 넣는다.
+# ⚠️ **정기 실행은 Supabase Cron(pg_cron)이 한다** — 월요일 KST 09:00.
+# `schedule:` 을 되살리지 말 것. 이유는 kbo-settle.yml 주석 참조.
+#
+# 여기 남겨둔 이유는 빠진 주를 다시 채우는 수동 경로가 필요해서다.
 on:
-  schedule:
-    - cron: '7 1 * * 1'
   workflow_dispatch:
     inputs:
       date:
-        description: '수집 시작일 (YYYY-MM-DD). 비우면 오늘부터 7일치. 빠진 주를 다시 채울 때 지정한다.'
+        description: '수집 시작일 (YYYY-MM-DD). 비우면 오늘부터 7일치.'
         required: false
         type: string
 
-# 같은 워크플로가 겹쳐 돌면 같은 경기를 두 번 upsert 한다. 앞 실행이 끝날 때까지 대기시킨다
-# (cancel 하면 그 주 일정이 아예 안 채워질 수 있다).
 concurrency:
   group: kbo-schedule
   cancel-in-progress: false

@@ -8,7 +8,7 @@ import {
   looksLikeRegularGameId,
   outcomeOf,
   toGameStatus,
-} from './kbo-source'
+} from '../../../supabase/functions/_shared/kbo-source.ts'
 
 /** 실제 소스 응답을 본뜬 기본값 */
 const base = {

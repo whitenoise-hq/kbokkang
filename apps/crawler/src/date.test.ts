@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dateRange, kstDateTimeToUtcIso, shiftDate } from './date'
+import { dateRange, kstDateTimeToUtcIso, shiftDate } from '../../../supabase/functions/_shared/date.ts'
 
 describe('kstDateTimeToUtcIso', () => {
   it('타임존 표기가 없는 소스 시각을 KST 로 해석한다', () => {

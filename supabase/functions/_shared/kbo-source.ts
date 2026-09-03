@@ -5,7 +5,10 @@
  * 아래 내용은 2026 시즌 843경기 표본을 실제로 조회해 확인한 것이다.
  */
 
-import type { GameStatus } from './game'
+import type { Database } from './database.types.ts'
+
+/** `games.status` — 생성 타입에서 직접 가져온다. DB enum 과 어긋날 수 없다. */
+type GameStatus = Database['public']['Enums']['game_status']
 
 /**
  * 네이버 팀 코드 → 구단 약칭(`teams.short_name`).

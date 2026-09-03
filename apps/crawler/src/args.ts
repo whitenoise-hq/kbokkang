@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { todayKst } from './date'
+import { todayKst } from '../../../supabase/functions/_shared/date.ts'
 
 /**
  * 실행 인자 파싱 — `--date=YYYY-MM-DD`.

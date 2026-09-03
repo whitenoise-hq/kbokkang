@@ -17,7 +17,7 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - 모노레포: Turborepo + pnpm. 레포명 `kbokkang`, npm 스코프 `@kbokkang/*`.
   - `apps/mobile` (Expo + React Native) / `apps/admin` (Next.js)
   - `packages/shared` (공통 상수·타입·디자인 토큰) / `packages/assets` (공용 폰트 등 정적 파일)
-- 백엔드: Supabase (DB + Auth + Storage). 크롤링/정산: GitHub Actions cron.
+- 백엔드: Supabase (DB + Auth + Storage). 크롤링/정산: **Supabase Cron(pg_cron) + Edge Function**.
 
 ## 개발 순서 (엄수)
 
@@ -102,29 +102,45 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
   앱 화면(6단계)을 DB 없이 만들 필요가 생기면 그때 앱 쪽에 따로 만든다 —
   어드민 fixture 를 되살리지 않는다(실 DB 와 두 갈래로 갈라져 화면이 어긋난다).
 
-**5단계 완료 — 크롤링/정산 (`apps/crawler` + GitHub Actions)**
+**5단계 완료 — 크롤링/정산 (Supabase Cron + Edge Function)**
 
 - 데이터 소스: **네이버 스포츠 `api-gw`**. 조사 근거와 소스 신뢰 방침은 통합기획서 3장.
-  소스 규칙 코드는 `packages/shared/kbo-source.ts` (2026 시즌 843경기로 확인).
-- 액션 2개: 일정 `7 1 * * 1`(월 KST 10:07, 실행일 포함 7일) /
-  정산 `7,37 1-15 * * *`(매일 KST 10:07~00:37). 둘 다 `--date` 인자로 복구 실행 가능.
-- Actions Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 등록됨.
-- 실연결 검증: 9/1~9/7 30경기 수집, 8/25 5경기 정산(3:3 무승부 포함), 3회 실행 멱등성,
-  Actions 양쪽 워크플로 수동 실행 성공.
+- **로직은 `supabase/functions/_shared/` 에 한 벌만 있다.** Edge Function(Deno)과
+  로컬 CLI(`apps/crawler`, Node)가 **같은 파일**을 임포트한다.
+  - `_shared` — 플랫폼 무관. 설정을 전부 **인자로 받는다**(`process.env`/`Deno.env` 금지).
+  - `_runtime` — **Deno 전용**(`Deno` 전역을 쓰는 파일만). `_shared` 에 두면 Node 타입체크가 깨진다.
+  - `apps/crawler` 는 껍데기 CLI + 테스트다. 로직을 여기에 다시 쓰지 말 것.
+- 스케줄: `supabase/migrations/20260903000000_pg_cron_crawler.sql`
+  - 정산 `0,30 0-16 * * *` (UTC) = **KST 09:00~01:00 30분 간격**
+  - 일정 `0 0 * * 1` (UTC) = **월 KST 09:00**, 기준일 포함 7일
+  - ⚠️ **pg_cron 은 UTC 로 동작한다.**
+- **게이트(`_shared/gate.ts`)가 실제로 일할지 판단한다.** cron 은 고정 간격이고,
+  첫 경기 시작 1시간 전부터 전 경기 정산 완료까지만 소스를 부른다. 하루 소스 호출 ~7회.
+- 검증: anon key 401 / service role 200, 게이트가 경기 1시간 전이라 소스 호출 없이 건너뜀,
+  자기복구(어제 경기 되돌려 오늘 실행으로 정산) 확인.
 
 **크롤러 작업 시 주의**
 
-- ⚠️⚠️ **GitHub Actions `schedule` 은 신뢰할 수 없다.** 2026-09-01 에 예정된 약 30회 중
-  **2회만 실행됐다**(하나는 18분 지연). GitHub 문서가 부하 시 큐 작업이 **버려진다**고
-  명시하며 "the start of every hour" 를 고부하 시각으로 지목한다 — cron 분을 정시에서
-  옮겨뒀지만 그건 확률을 줄이는 것뿐 보장이 아니다.
-  - **진짜 방어선은 정산 잡의 자기복구다:** 오늘만 보지 않고 **최근 3일**(`LOOKBACK_DAYS`)의
-    미정산 경기를 훑는다. 실행이 빠져도 다음 실행이 주워간다.
+- ⚠️⚠️ **GitHub Actions `schedule` 로 돌아가지 말 것.** 실측으로 버렸다:
+  09-01 예정 약 30회 중 **2회**, 09-02 는 **4회**만 실제로 만들어졌다. GitHub 문서가 부하 시
+  큐 작업이 **버려진다**고 명시한다. 실효 간격이 4~5시간이 되어 **정산이 경기 종료 2시간
+  30분 뒤**에 됐다(09-02 경기 → 09-03 00:16). 워크플로 설정 문제가 아니었다 —
+  `active`, Actions 활성, public 레포라 쿼터 무관, 실행된 건은 전부 성공이었다.
+  - 두 워크플로는 **`workflow_dispatch` 전용**으로 남겨뒀다(로그 보기 편한 수동 복구 경로).
+    `schedule:` 을 되살리면 소스 호출이 두 배가 된다.
+- ⚠️ **자기복구를 없애지 말 것:** 정산은 오늘만 보지 않고 **최근 3일**(`LOOKBACK_DAYS`)의
+  미정산 경기를 훑는다. 플랫폼을 바꿨어도 남긴다 — 새 플랫폼도 장애가 난다.
   - 하루만 보던 시절 9/1 5경기가 `live` 로 멈춰 영구 미정산이 됐다. 다음 실행은 이미
     날짜가 바뀌어 9/2 를 보고 있었고 아무도 어제를 돌아보지 않았다.
-  - 그래서 **cron 창이 KST 자정을 넘어가도(00:07·00:37) 문제없다** — 어제가 범위 안이다.
-  - 타이밍 정확도가 더 필요하면 Supabase Cron(pg_cron)이 대안이다. **무료**지만
-    크롤러를 Edge Function(Deno)으로 이식해야 한다.
+  - 그래서 **cron 창이 KST 자정을 넘어가도 문제없다** — 어제가 범위 안이다.
+- ⚠️ **service role key 형식이 두 가지다.** Supabase 가 키 체계를 이전 중이라 한 프로젝트에
+  공존한다: Edge Function 에 주입되는 값은 **신규 `sb_secret_...`(41자)**, 어드민 `.env` 는
+  **레거시 JWT `eyJ...`(219자)**. 그래서 `auth.ts` 는 두 경로를 모두 받는다(주입값 일치 또는
+  JWT `role` 클레임). 단순 문자열 비교만 하면 레거시로 부르는 호출이 전부 401 이다(겪었다).
+  - JWT 클레임 검사는 **게이트웨이가 서명을 검증했다는 전제**다. `verify_jwt` 를 끄지 말 것.
+- ⚠️ **게이트는 `crawl_runs.run_at` 으로 "하루 첫 실행"을 판정한다.** `target_date` 로 보면
+  안 된다 — 주간 일정 잡이 7일치 행을 **미리** 쓰기 때문에 "오늘 기록 없음"이 성립하지 않고,
+  주중에 추가된 경기를 다음 월요일까지 못 잡는다.
 - ⚠️ **`crawl_runs.target_date` 는 "이 날짜를 수집했다"는 뜻.** 여러 날짜를 수집하면
   **날짜마다 한 행**을 남겨야 한다. 시작일 한 행만 남겼더니 나머지 6일이 어드민에서
   "수집 이력 없음"으로 보였다. 경기 0건인 날짜도 행을 남긴다(그게 "경기 없는 날"의 증거).
@@ -133,7 +149,16 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - 소스 `gameDateTime` 에 타임존 표기가 없다 — KST 로 해석해야 한다.
 - 응답 구조가 어긋나면 **실패시킨다.** 추측해서 채우면 스코어가 0 으로 들어간다.
 - 워크플로 트리거에 `pull_request` 를 추가하지 않는다 — public 레포라 외부인이 PR 로
-  시크릿을 빼갈 수 있다. `schedule` + `workflow_dispatch` 만 둔다.
+  시크릿을 빼갈 수 있다. `workflow_dispatch` 만 둔다.
+- ⚠️ **Edge Function 의 `import_map` 은 자동 탐색되지 않는다.** `supabase/config.toml` 의
+  `[functions.<name>] import_map` 에 명시해야 배포 번들에 적용된다(빼먹으면 `zod` 를
+  "relative import path not prefixed with ./" 로 거부한다 — 겪었다).
+  - 소스는 **베어 스펙파이어**(`zod`)를 쓴다. Node 는 node_modules, Deno 는 import_map 으로
+    해석한다. 소스에 `npm:` 을 박으면 Node 쪽(CLI·테스트)이 깨진다.
+  - **import_map 버전은 pnpm 워크스페이스 버전과 일치시킬 것.** 어긋나면 테스트와 배포된
+    함수가 다른 라이브러리로 돈다.
+- ⚠️ **pg_cron 은 Vault 에서 키를 읽는다.** 마이그레이션에 시크릿을 넣지 않는다(public 레포).
+  Vault 등록은 사람이 SQL 에디터에서 한 번 한다 — 통합기획서 3장 참조.
 
 **배포 / 레포**
 

@@ -1,10 +1,6 @@
 import { z } from 'zod'
-import {
-  isRegularSeasonGame,
-  type NaverTeamCode,
-  NAVER_TEAM_CODES,
-} from '@kbokkang/shared'
-import { kstDateTimeToUtcIso } from '../date'
+import { isRegularSeasonGame, type NaverTeamCode, NAVER_TEAM_CODES } from './kbo-source.ts'
+import { kstDateTimeToUtcIso } from './date.ts'
 
 /**
  * 네이버 스포츠 경기 일정/결과 소스.
