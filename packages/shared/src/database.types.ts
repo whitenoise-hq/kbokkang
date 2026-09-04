@@ -507,7 +507,6 @@ export type Database = {
       }
     }
     Functions: {
-      crawler_diagnose: { Args: never; Returns: Json }
       create_cards_bulk: {
         Args: { items: Json }
         Returns: {
@@ -543,7 +542,7 @@ export type Database = {
         | "sell"
         | "admin_adjust"
       prediction_pick: "home" | "away"
-      prediction_result: "pending" | "win_hit" | "score_hit" | "miss"
+      prediction_result: "pending" | "win_hit" | "score_hit" | "miss" | "void"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -685,7 +684,7 @@ export const Constants = {
         "admin_adjust",
       ],
       prediction_pick: ["home", "away"],
-      prediction_result: ["pending", "win_hit", "score_hit", "miss"],
+      prediction_result: ["pending", "win_hit", "score_hit", "miss", "void"],
     },
   },
 } as const

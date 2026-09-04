@@ -45,7 +45,7 @@ const UserDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
   const ownedKinds = user.dexProgress.reduce((sum, item) => sum + item.owned, 0)
   const hitRate = toPercent(
     user.record.winHits + user.record.scoreHits,
-    user.record.totalPredictions,
+    user.record.resolvedPredictions,
   )
 
   return (
@@ -103,7 +103,7 @@ const UserDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
             <p className="text-muted-foreground text-sm font-medium">예측 적중률</p>
             <p className="tabular text-3xl font-bold">{formatPercent(hitRate, 0)}</p>
             <p className="text-muted-foreground tabular text-xs">
-              {user.record.totalPredictions}회 중 {user.record.winHits + user.record.scoreHits}회
+              {user.record.resolvedPredictions}회 중 {user.record.winHits + user.record.scoreHits}회
             </p>
           </CardContent>
         </Card>

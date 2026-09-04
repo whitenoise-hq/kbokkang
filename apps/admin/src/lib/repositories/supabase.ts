@@ -78,7 +78,9 @@ const bestStreakOf = (
   let current = 0
 
   for (const row of ordered) {
-    if (row.result === 'pending') continue
+    // 아직 결과가 없거나(pending) 경기가 무효인 것(void)은 연속을 끊지 않는다.
+    // 우천 취소로 연승이 끊기면 유저 탓이 아닌 이유로 기록이 사라진다.
+    if (row.result === 'pending' || row.result === 'void') continue
 
     if (row.result === 'win_hit' || row.result === 'score_hit') {
       current += 1
@@ -437,6 +439,11 @@ const userRepository: UserRepository = {
       })),
       record: {
         totalPredictions: results.length,
+        // 적중률 분모 — 아직 결과가 없거나(pending) 무효인 것(void)은 제외한다.
+        // 포함하면 정산 전 경기와 우천 취소가 적중률을 깎는다.
+        resolvedPredictions: results.filter(
+          (row) => row.result !== 'pending' && row.result !== 'void',
+        ).length,
         winHits: results.filter((row) => row.result === 'win_hit').length,
         scoreHits: results.filter((row) => row.result === 'score_hit').length,
         bestStreak: bestStreakOf(results),

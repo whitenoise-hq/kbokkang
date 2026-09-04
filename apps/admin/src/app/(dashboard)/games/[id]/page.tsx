@@ -34,6 +34,8 @@ const RESULT_CLASS = {
   win_hit: 'bg-success/10 text-success',
   score_hit: 'bg-success/15 text-success',
   miss: 'bg-muted text-muted-foreground',
+  // 무효(경기 취소)는 적중/미적중과 구분되어야 한다 — 유저 탓이 아니다
+  void: 'bg-warning/10 text-warning',
 } as const
 
 /** 경기 상세 + 예측 로그 — 어드민 기획서 3.5 */

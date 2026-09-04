@@ -22,7 +22,14 @@ export const PREDICTION_PICKS = ['home', 'away'] as const
 
 export type PredictionPick = (typeof PREDICTION_PICKS)[number]
 
-export const PREDICTION_RESULTS = ['pending', 'win_hit', 'score_hit', 'miss'] as const
+/**
+ * `void` = 무효. 우천 취소 등으로 경기가 성립하지 않은 경우다.
+ *
+ * 예측은 무료라(포인트를 걸지 않는다 — 통합기획서 6장) 환급이 없고, 무효로 마감만 한다.
+ * 마감하지 않으면 `pending` 으로 남아 유저 화면에 "집계 중"이 영원히 표시된다.
+ * DB 트리거가 취소 경기의 예측을 자동으로 `void` 로 바꾼다.
+ */
+export const PREDICTION_RESULTS = ['pending', 'win_hit', 'score_hit', 'miss', 'void'] as const
 
 export type PredictionResult = (typeof PREDICTION_RESULTS)[number]
 
@@ -31,6 +38,7 @@ export const PREDICTION_RESULT_LABEL: Record<PredictionResult, string> = {
   win_hit: '승패 적중',
   score_hit: '스코어 적중',
   miss: '미적중',
+  void: '무효',
 } as const
 
 /** 예측 가능 여부 — 서버에서 받은 마감 시각과 서버 기준 현재 시각으로 판정 */

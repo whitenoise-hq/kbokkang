@@ -61,6 +61,8 @@ export interface PointTransaction {
 /** 유저 예측 성적 집계 */
 export interface UserRecord {
   readonly totalPredictions: number
+  /** 결과가 확정된 예측 수(pending·void 제외). 적중률 분모로 쓴다 */
+  readonly resolvedPredictions: number
   readonly winHits: number
   readonly scoreHits: number
   readonly bestStreak: number
