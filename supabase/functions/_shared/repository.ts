@@ -105,6 +105,10 @@ export const upsertGames = async (
         // 취소 경기는 0:0 으로 오므로 스코어를 넣지 않는다(결과가 없는 것과 구분)
         home_score: finished ? game.homeScore : null,
         away_score: finished ? game.awayScore : null,
+        // ⚠️ 이 플래그가 없으면 games_settled_has_scores 제약에 걸려 **배치 전체가 실패한다.**
+        // 취소 경기는 status=settled 인데 스코어가 없어서 제약이 요구하는 조건을 못 채운다.
+        // upsert 가 한 배치로 나가므로 취소 1건이 그날 5경기를 전부 막았다(2026-09-03).
+        cancelled: isCancelled(game),
         // status=settled 는 취소 경기뿐이다. 정산 시각은 settle_game 이 채운다
         settled_at: isCancelled(game) ? now.toISOString() : null,
         // predict_close_at 은 DB 트리거가 채운다

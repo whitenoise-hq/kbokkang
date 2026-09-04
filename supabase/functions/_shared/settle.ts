@@ -60,6 +60,28 @@ export const runSettle = async (
     if (!gate.shouldRun) return { ...empty, skipped: true, reason: gate.reason }
   }
 
+  try {
+    return await settlePass(supabase, { from, to, now, force })
+  } catch (cause) {
+    // ⚠️ **실패도 반드시 기록한다.** 기록하지 않으면 조용히 실패한다 —
+    // 2026-09-03 에 취소 경기 때문에 34회 연속 실패했는데 crawl_runs 에 아무것도 남지
+    // 않아서, 경기가 미정산으로 남은 것을 사람이 눈치채기 전까지 아무도 몰랐다.
+    // crawl_runs 가 존재하는 이유가 이것이다.
+    const message = cause instanceof Error ? cause.message : String(cause)
+
+    await recordCrawlRuns(supabase, [
+      { targetDate: to, success: false, gamesFound: 0, gamesSettled: 0, error: message },
+    ])
+
+    throw cause
+  }
+}
+
+/** 실제 수집·정산. 실패 기록은 호출자(`runSettle`)가 담당한다. */
+const settlePass = async (
+  supabase: Client,
+  { from, to, now, force }: { from: string; to: string; now: Date; force: boolean },
+): Promise<SettleResult> => {
   const games = await fetchGames(from, to)
   const upsert = await upsertGames(supabase, games, now)
   const pending = await gamesToSettle(supabase, from, to)
