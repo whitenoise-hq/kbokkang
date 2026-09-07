@@ -216,12 +216,28 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 **6-1 골격 완료** — Expo Router + 폰트 + TanStack Query + Supabase 클라이언트.
 `expo-doctor` 21/21 통과, iOS 번들 빌드 확인.
 
+**6-2 진행 중 — 탭 셸 + 홈(예측) 완료**
+
+- 탭 **5개**(홈·예측·뽑기·도감·마이). 기획서는 4개였는데 예측 기록·성적을 분리했다.
+  홈은 **당일 경기만** 보여주고 상단에 어제 결과 한 줄 배너를 둔다.
+- 홈 경기 카드는 **3열**(원정/무승부/홈)이고 셀 자체가 선택지다.
+  저장은 **경기 카드마다 명시적**(선택만으로 저장하지 않는다).
+- 남은 화면: 예측 · 도감 · 뽑기 · 온보딩.
+
 ```
-app/            _layout.tsx (폰트·Query·SafeArea) · index.tsx (임시)
-components/ui/  Text.tsx (폰트 굵기 함정 흡수) · Screen.tsx
-lib/            env.ts · supabase.ts · query-client.ts
-theme/          colors.ts (shared 재노출) · fonts.ts
-types/          assets.d.ts
+app/
+  _layout.tsx        폰트 로드 · Query · SafeArea
+  (tabs)/            _layout.tsx(탭 5개) · index(홈) · predict · draw · dex · my
+components/
+  ui/                Text(폰트 함정 흡수) · Screen · Card · Badge · Button
+  game/              GameCard · PickCell · TeamMark · PredictFooter ·
+                     YesterdayBanner · game-status-view
+hooks/               useServerNow (서버 시각 보정)
+lib/                 env · supabase · query-client · format
+mocks/               games (⚠️ 6-4 에서 삭제)
+theme/               colors(shared 재노출) · fonts · shadow
+types/               assets.d.ts · game.ts
+assets/packs/        팩 이미지(상단/하단 분리) + source/ 원본
 metro.config.js
 ```
 
@@ -257,6 +273,15 @@ metro.config.js
 **앱 디자인 (확정)**
 
 - 토스 스타일. **라이트 고정**(다크모드 없음). 아이콘 Ionicons 만, **이모지 금지**.
+- ⚠️ **화면 배경은 `surface`(연회색), 카드·탭 바는 `background`(흰색)** — 토큰 이름과 반대다.
+  이름대로 화면을 흰색으로 두면 카드·탭 바까지 전부 흰색이라 아무것도 구분되지 않는다
+  (어드민에서 겪은 것과 같은 문제).
+- ⚠️ 경계가 필요한 곳은 **`borderStrong`(#D1D6DB)** 을 쓴다. `border`(#E5E8EB)는 흰 배경에서
+  거의 안 보인다. `textDisabled` 를 테두리로 쓰지 말 것(의미가 어긋난다).
+- ⚠️ **전체 폭 세그먼트에 `scale` 눌림 효과를 쓰지 말 것.** 중앙 기준 축소로 위아래에 틈이
+  생겨 깜빡인다(겪었다). 배경색 변화로 대체한다.
+- ⚠️ **탭 바에 중앙 강조 버튼을 넣지 말 것.** 시도했는데 혼자 튀어나와 열이 맞지 않았다.
+  가이드 7.1 의 "뽑기만 화려하다"는 **뽑기 화면**에 대한 것이고 탭 바가 아니다.
 - **뽑기만 화려하다 — 의도된 예외.** 홈·도감·마이는 심심하게 두고 드라마를 뽑기에 몰아넣는다.
   뽑기의 화려함을 다른 화면으로 가져오면 토스 감성이 깨지고 뽑기 임팩트도 죽는다.
 - 뽑기 = **카드팩 개봉**(포켓몬 TCG Pocket 방식). 팩 캐러셀 → 스와이프로 자르기 →
@@ -266,13 +291,31 @@ metro.config.js
 - ⚠️ 닉네임은 `public.users.nickname` + `is_nickname_available()` RPC 를 쓴다.
   플레이북은 `user_metadata` 를 권하지만 그러면 **중복 체크가 불가능**하다.
 
+**예측 규칙 (변경됨 — 주의)**
+
+- ⚠️⚠️ **예측은 홈/무승부/원정 3택이다.** 처음엔 2택이고 "무승부면 전원 미적중"이었는데,
+  KBO 는 무승부가 실제로 있어서(실측 3:3, 0:0) 그 경기 예측자 전원이 손해를 봤다.
+  - `settle_game()` 은 실제 결과를 `prediction_pick` 과 같은 형태로 만들어 **단순 비교**로
+    판정한다. 기존 불리언 비교(`(pick='home') <> home_won`)로는 3택을 표현할 수 없다.
+  - 무승부 적중 포인트는 승패와 **동일하게 30**.
+  - ⚠️ **enum 에 값을 추가하면 타입 검사가 안 잡아주는 곳이 있다.** 어드민에서 두 건 겪었다:
+    `awayPicks = 전체 - homePicks`(무승부가 원정에 섞임), `pick === 'home' ? A : B`(무승부가
+    원정으로 표시됨). **뺄셈으로 나머지를 구하거나 이항 삼항식을 쓰지 말 것.**
+- ⚠️ **예측 마감 = 경기 시작 30분 전**(처음엔 1시간 전). KBO 가 타순을 시작 1~1.5시간 전에
+  발표하므로 1시간 전이면 라인업을 보고 예측할 시간이 없었다.
+  - 마감 검증은 세 곳에 있고 **모두 `games.predict_close_at` 컬럼 기준**이다:
+    트리거 / `predictions_insert_own` RLS(`now() < g.predict_close_at`) / 앱의 `gamePhaseOf`.
+  - `PREDICT_CLOSE_OFFSET_MINUTES` 는 **표시용 상수**다(어드민 규칙 화면). 진짜 출처는 트리거.
+  - ⚠️ 크롤러 게이트의 1시간 리드는 **마감과 별개**다. 마감보다 먼저 열려야 우천 취소가
+    마감 전에 반영된다.
+
 **앱에 필요한데 아직 없는 것 (6-3)**
 
 - `delete_account` RPC — **App Store 5.1.1(v) 필수.** 없으면 리젝된다.
   `users`·`user_cards`·`predictions`·`draws`·`point_transactions` 를 전부 정리해야 한다.
 - `draw_cards` RPC — 뽑기(서버 추첨. 클라 신뢰 금지)
 - `sell_card` RPC — 중복 판매(`user_cards` 에 delete 권한이 없어 RPC 가 필요)
-- 예측 제출 시 마감(`predict_close_at`) 검증이 RLS 에 있는지 확인
+- ~~예측 마감 검증~~ — 확인 완료. `predictions_insert_own` RLS 정책에 이미 있다.
 
 미결: 10연차 할인율 확정, 구단 로고 사용 리스크 판단, 카드 생성 프롬프트 확정,
 카드 프레임 레이아웃(통이미지 위 이름·번호·등급 배지 배치).

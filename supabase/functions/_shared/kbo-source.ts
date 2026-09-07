@@ -105,18 +105,3 @@ export const hasFinalScore = (input: NaverGameStatusInput): boolean =>
   input.statusCode === 'RESULT' &&
   input.homeScore !== null &&
   input.awayScore !== null
-
-/**
- * 승자 판정.
- *
- * ⚠️ 소스의 `winner` 필드를 쓰지 않는다. 경기 전(BEFORE) 경기가 전부 `DRAW` 로 오기 때문에
- * 그대로 믿으면 미실시 경기를 무승부로 처리한다(표본 225건 중 206건이 경기 전이었다).
- * 스코어로 직접 판정한다.
- */
-export type GameOutcome = 'home' | 'away' | 'draw'
-
-export const outcomeOf = (homeScore: number, awayScore: number): GameOutcome => {
-  if (homeScore > awayScore) return 'home'
-  if (homeScore < awayScore) return 'away'
-  return 'draw'
-}

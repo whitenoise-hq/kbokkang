@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Users } from 'lucide-react'
-import { PREDICTION_RESULT_LABEL } from '@kbokkang/shared'
+import {
+  PREDICTION_PICK_LABEL,
+  PREDICTION_RESULT_LABEL,
+  type PredictionPick,
+} from '@kbokkang/shared'
 import { PageHeader } from '@/components/page-header'
 import { GameStatusBadge } from '@/components/game-status-badge'
 import { TeamLogo } from '@/components/team-logo'
@@ -53,13 +57,22 @@ const GameDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
   const homeTeam = teams.find((team) => team.id === game.homeTeamId)
   const awayTeam = teams.find((team) => team.id === game.awayTeamId)
 
+  // ⚠️ 뺄셈으로 구하지 않는다. 예측은 홈/무승부/원정 **3택**이라
+  //    `전체 - 홈` 으로 원정을 구하면 무승부가 원정에 섞인다(실제로 그런 버그가 있었다).
+  const awayPicks = predictions.filter((item) => item.pickWinner === 'away').length
+  const drawPicks = predictions.filter((item) => item.pickWinner === 'draw').length
   const homePicks = predictions.filter((item) => item.pickWinner === 'home').length
-  const awayPicks = predictions.length - homePicks
   const scorePicks = predictions.filter((item) => item.pickHomeScore !== null).length
   const hits = predictions.filter(
     (item) => item.result === 'win_hit' || item.result === 'score_hit',
   ).length
   const paidPoints = predictions.reduce((sum, item) => sum + (item.earnedPoints ?? 0), 0)
+
+  /** 선택 라벨 — 무승부는 팀 이름이 없으므로 별도 처리한다 */
+  const pickLabel = (pick: PredictionPick): string => {
+    if (pick === 'draw') return PREDICTION_PICK_LABEL.draw
+    return pick === 'home' ? (homeTeam?.shortName ?? '홈') : (awayTeam?.shortName ?? '원정')
+  }
 
   return (
     <>
@@ -125,12 +138,16 @@ const GameDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
               style={{ width: `${toPercent(awayPicks, predictions.length)}%` }}
             />
             <div
+              className="bg-warning/60 h-full"
+              style={{ width: `${toPercent(drawPicks, predictions.length)}%` }}
+            />
+            <div
               className="bg-muted-foreground/40 h-full rounded-r-full"
               style={{ width: `${toPercent(homePicks, predictions.length)}%` }}
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="flex items-center gap-2">
               <span className="bg-primary size-2.5 shrink-0 rounded-full" aria-hidden />
               <span className="text-muted-foreground text-sm">
@@ -139,6 +156,15 @@ const GameDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
               <span className="tabular ml-auto text-sm font-bold">{formatNumber(awayPicks)}</span>
               <span className="text-muted-foreground tabular w-9 text-right text-[11px]">
                 {formatPercent(toPercent(awayPicks, predictions.length), 0)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="bg-warning/60 size-2.5 shrink-0 rounded-full" aria-hidden />
+              <span className="text-muted-foreground text-sm">{PREDICTION_PICK_LABEL.draw}</span>
+              <span className="tabular ml-auto text-sm font-bold">{formatNumber(drawPicks)}</span>
+              <span className="text-muted-foreground tabular w-9 text-right text-[11px]">
+                {formatPercent(toPercent(drawPicks, predictions.length), 0)}
               </span>
             </div>
 
@@ -204,9 +230,7 @@ const GameDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
                     </TableCell>
 
                     <TableCell className="text-sm">
-                      {prediction.pickWinner === 'home'
-                        ? (homeTeam?.shortName ?? '홈')
-                        : (awayTeam?.shortName ?? '원정')}
+                      {pickLabel(prediction.pickWinner)}
                     </TableCell>
 
                     <TableCell className="tabular text-center text-sm">

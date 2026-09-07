@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  outcomeOf,
   GAME_STATUSES,
   GAME_STATUS_LABEL,
   PREDICTION_RESULTS,
@@ -51,6 +52,18 @@ describe('상태 라벨', () => {
 
 describe('예측 마감 오프셋', () => {
   it('경기 시작 1시간 전이다', () => {
-    expect(PREDICT_CLOSE_OFFSET_MINUTES).toBe(60)
+    expect(PREDICT_CLOSE_OFFSET_MINUTES).toBe(30)
+  })
+})
+
+describe('outcomeOf — 소스의 winner 필드를 쓰지 않는다', () => {
+  it('스코어로 직접 판정한다', () => {
+    expect(outcomeOf(7, 1)).toBe('home')
+    expect(outcomeOf(1, 7)).toBe('away')
+    expect(outcomeOf(3, 3)).toBe('draw')
+  })
+
+  it('0:0 무승부도 실제로 존재한다(2026-03-22 KIA 0:0 두산)', () => {
+    expect(outcomeOf(0, 0)).toBe('draw')
   })
 })

@@ -541,7 +541,7 @@ export type Database = {
         | "duplicate_refund"
         | "sell"
         | "admin_adjust"
-      prediction_pick: "home" | "away"
+      prediction_pick: "home" | "away" | "draw"
       prediction_result: "pending" | "win_hit" | "score_hit" | "miss" | "void"
     }
     CompositeTypes: {
@@ -683,7 +683,7 @@ export const Constants = {
         "sell",
         "admin_adjust",
       ],
-      prediction_pick: ["home", "away"],
+      prediction_pick: ["home", "away", "draw"],
       prediction_result: ["pending", "win_hit", "score_hit", "miss", "void"],
     },
   },

@@ -135,7 +135,7 @@ export const SettleDialog = ({
                 </strong>
                 <br />
                 <span className="text-muted-foreground">
-                  승패 적중 예측에 +30p, 스코어까지 맞힌 예측에 +150p가 지급됩니다
+                  승패·무승부 적중에 +30p, 스코어까지 맞힌 예측에 +150p가 지급됩니다
                 </span>
               </p>
             ) : (

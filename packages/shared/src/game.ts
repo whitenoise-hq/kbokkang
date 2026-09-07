@@ -16,11 +16,34 @@ export const GAME_STATUS_LABEL: Record<GameStatus, string> = {
 } as const
 
 /** 예측 마감 시각 = 경기 시작 - 1시간 */
-export const PREDICT_CLOSE_OFFSET_MINUTES = 60
+/**
+ * 예측 마감 = 경기 시작 - 30분.
+ *
+ * KBO 는 타순(라인업)을 경기 시작 1시간~1시간 30분 전에 발표한다. 마감이 1시간 전이면
+ * **라인업을 보고 예측할 시간이 없다.** 30분 전이면 확인한 뒤 예측할 수 있다.
+ *
+ * ⚠️ 값의 진짜 출처는 **DB 트리거**(`set_predict_close_at`)다. 이 상수는 **표시용**이며
+ *    (어드민 규칙 화면), 마감 판정은 항상 `games.predict_close_at` 컬럼을 쓴다.
+ *    둘이 어긋나면 운영자가 잘못된 값을 보게 되므로 함께 고친다.
+ */
+export const PREDICT_CLOSE_OFFSET_MINUTES = 30
 
-export const PREDICTION_PICKS = ['home', 'away'] as const
+/**
+ * 예측 선택지 — 홈 / 무승부 / 원정 **3택**.
+ *
+ * 처음엔 홈/원정 2택이고 "무승부면 전원 미적중"이었지만, **KBO 는 무승부가 실제로 있다**
+ * (크롤러 실측으로 3:3, 0:0 확인). 그러면 그 경기를 예측한 모든 유저가 아무 이유 없이
+ * 손해를 본다. 그래서 무승부를 선택지로 넣었다.
+ */
+export const PREDICTION_PICKS = ['home', 'draw', 'away'] as const
 
 export type PredictionPick = (typeof PREDICTION_PICKS)[number]
+
+export const PREDICTION_PICK_LABEL: Record<PredictionPick, string> = {
+  home: '홈 승',
+  draw: '무승부',
+  away: '원정 승',
+} as const
 
 /**
  * `void` = 무효. 우천 취소 등으로 경기가 성립하지 않은 경우다.
@@ -46,3 +69,21 @@ export const isPredictOpen = (predictCloseAt: Date, serverNow: Date): boolean =>
   serverNow.getTime() < predictCloseAt.getTime()
 
 export const isGameSettled = (status: GameStatus): boolean => status === 'settled'
+
+/**
+ * 승패 판정 — **스코어로만 판정한다.**
+ *
+ * ⚠️ 소스(네이버)의 `winner` 필드를 쓰지 않는다. 경기 전(BEFORE) 경기가 전부 `DRAW` 로
+ * 오기 때문에 그대로 믿으면 미실시 경기를 무승부로 처리한다(표본 225건 중 206건이 경기 전).
+ *
+ * KBO 는 무승부가 존재하고 **무승부도 선택지다**(`PREDICTION_PICKS`).
+ * 반환값이 `PredictionPick` 과 같은 형태라서 정산 판정이 단순 비교가 된다 —
+ * `settle_game()` 도 같은 방식으로 판정한다.
+ */
+export type GameOutcome = PredictionPick
+
+export const outcomeOf = (homeScore: number, awayScore: number): GameOutcome => {
+  if (homeScore > awayScore) return 'home'
+  if (homeScore < awayScore) return 'away'
+  return 'draw'
+}

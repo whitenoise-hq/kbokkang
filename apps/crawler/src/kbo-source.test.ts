@@ -6,7 +6,6 @@ import {
   isNaverTeamCode,
   isRegularSeasonGame,
   looksLikeRegularGameId,
-  outcomeOf,
   toGameStatus,
 } from '../../../supabase/functions/_shared/kbo-source.ts'
 
@@ -102,17 +101,5 @@ describe('결과 확정 여부', () => {
     expect(
       hasFinalScore({ ...base, statusCode: 'RESULT', cancel: true, homeScore: 0, awayScore: 0 }),
     ).toBe(false)
-  })
-})
-
-describe('승자 판정 — 소스의 winner 필드를 쓰지 않는다', () => {
-  it('스코어로 직접 판정한다', () => {
-    expect(outcomeOf(7, 1)).toBe('home')
-    expect(outcomeOf(1, 7)).toBe('away')
-    expect(outcomeOf(3, 3)).toBe('draw')
-  })
-
-  it('0:0 무승부도 실제로 존재한다(2026-03-22 KIA 0:0 두산)', () => {
-    expect(outcomeOf(0, 0)).toBe('draw')
   })
 })

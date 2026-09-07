@@ -18,6 +18,11 @@ export const COLORS = {
   background: '#FFFFFF',
   surface: '#F9FAFB',
   border: '#E5E8EB',
+  /**
+   * 더 진한 구분선. `border` 는 흰 배경 위에서 거의 보이지 않아 경계가 필요한 곳에 쓴다
+   * (탭 바 상단, 카드 테두리 등). 실제로 `border` 만으로는 구분이 안 된다는 피드백을 받았다.
+   */
+  borderStrong: '#D1D6DB',
 
   textStrong: '#191F28',
   textNormal: '#4E5968',
