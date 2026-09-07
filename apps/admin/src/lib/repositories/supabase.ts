@@ -11,16 +11,20 @@ import type {
   Json,
   PointFlowPoint,
   PointTransaction,
+  PredictionResult,
   Team,
   UserDetail,
   UserSummary,
 } from '@kbokkang/shared'
 import {
+  bestStreak,
   CARD_GRADES,
   DRAW_GRADE_RATES,
   DRAW_TYPES,
   formatDexNo,
   gradeRank,
+  groupPredictionsByDay,
+  isResolved,
   parseDexNo,
 } from '@kbokkang/shared'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
@@ -64,34 +68,27 @@ const one = <T>(value: T | readonly T[]): T => {
 }
 
 /**
- * 최고 연승 — 경기 시작 시각 순으로 정렬해 연속 적중 최대 길이를 센다.
- * 정산 전(pending)은 아직 결과가 없으므로 연속을 끊지 않고 건너뛴다.
+ * 최고 연승 — **KST 날짜별로 묶어** `bestStreak`(shared)에 넘긴다.
+ *
+ * 연승은 **하루 단위 전승**이다(그날 확정된 예측을 전부 맞힌 날의 연속). 판정은 shared 에
+ * 한 벌만 둔다 — 앱 예측 탭이 같은 숫자를 보여줘야 하고, 두 곳에서 따로 세면 운영자가
+ * 유저와 다른 성적을 보게 된다. 여기서는 조인 결과를 펴는 것만 책임진다.
+ *
+ * ⚠️ 예전에는 경기 단위(연속 적중 경기 수)였다. 평일 5경기가 전부 18:30 시작이라
+ *    **같은 데이터에서 값이 달라지는** 버그가 있었다 — 이 쿼리에 `ORDER BY` 도 없어서
+ *    DB 반환 순서에 성적이 좌우됐다. 자세한 경위는 `bestStreak` 주석 참고.
  */
 const bestStreakOf = (
-  rows: readonly { result: string; games: { start_at: string } | { start_at: string }[] }[],
-): number => {
-  const ordered = rows
-    .map((row) => ({ result: row.result, startAt: one(row.games).start_at }))
-    .toSorted((a, b) => a.startAt.localeCompare(b.startAt))
-
-  let best = 0
-  let current = 0
-
-  for (const row of ordered) {
-    // 아직 결과가 없거나(pending) 경기가 무효인 것(void)은 연속을 끊지 않는다.
-    // 우천 취소로 연승이 끊기면 유저 탓이 아닌 이유로 기록이 사라진다.
-    if (row.result === 'pending' || row.result === 'void') continue
-
-    if (row.result === 'win_hit' || row.result === 'score_hit') {
-      current += 1
-      best = Math.max(best, current)
-    } else {
-      current = 0
-    }
-  }
-
-  return best
-}
+  rows: readonly {
+    result: PredictionResult
+    games: { start_at: string } | { start_at: string }[]
+  }[],
+): number =>
+  bestStreak(
+    groupPredictionsByDay(
+      rows.map((row) => ({ result: row.result, startAt: one(row.games).start_at })),
+    ),
+  )
 
 const RANGE_ERROR = 'PGRST103' // 요청 범위가 결과 범위를 벗어남 — 빈 페이지로 처리한다
 
@@ -439,11 +436,9 @@ const userRepository: UserRepository = {
       })),
       record: {
         totalPredictions: results.length,
-        // 적중률 분모 — 아직 결과가 없거나(pending) 무효인 것(void)은 제외한다.
+        // 적중률 분모 — 아직 결과가 없거나(pending) 무효인 것(void)은 제외한다(shared 의 `isResolved`).
         // 포함하면 정산 전 경기와 우천 취소가 적중률을 깎는다.
-        resolvedPredictions: results.filter(
-          (row) => row.result !== 'pending' && row.result !== 'void',
-        ).length,
+        resolvedPredictions: results.filter((row) => isResolved(row.result)).length,
         winHits: results.filter((row) => row.result === 'win_hit').length,
         scoreHits: results.filter((row) => row.result === 'score_hit').length,
         bestStreak: bestStreakOf(results),

@@ -15,7 +15,7 @@ import { formatTime } from '@/lib/format'
 import type { GameView } from '@/types/game'
 import { statusViewOf } from './game-status-view'
 import { TeamMark } from './TeamMark'
-import { PickCell } from './PickCell'
+import { PickCell, type PickCellFill } from './PickCell'
 import { PickSegment } from './PickSegment'
 import { PredictFooter } from './PredictFooter'
 
@@ -28,9 +28,16 @@ import { PredictFooter } from './PredictFooter'
  * 처음엔 카드·칸·배지에 각각 테두리와 색을 뒀는데 "액자 안의 액자"가 되어
  * **정신사납고 정돈이 안 된** 느낌이 났다.
  *
- * 상태도 배지로 띄우지 않고 `18:30 · 5시간 남음` **한 줄**로 좌측에 모은다 —
+ * 상태도 배지로 띄우지 않고 `18:30 | 5시간 남음` **한 줄**로 좌측에 모은다 —
  * 오른쪽 위에 색 알약이 떠 있으면 시각과 경쟁해 시선이 갈린다. 임박·집계중 같은
  * 강조는 **글자색**으로만 알린다.
+ *
+ * 시각만 `button`(16)이고 **뒤따르는 텍스트는 `caption`(12)** 이다. 같은 크기로 두면
+ * 남은 시간이 시각만큼 커 보여 무엇이 경기 시간인지 한눈에 안 잡힌다.
+ *
+ * 구분자는 `|` **글자**다. 1px `View` 로 그릴 수도 있지만 Pretendard 의 `|` 가 이미
+ * 깔끔한 세로선이고, 글자라서 **텍스트 baseline 에 저절로 맞는다** — View 는 높이와
+ * 수직 위치를 손으로 맞춰야 하고 폰트 크기를 바꿀 때마다 다시 어긋난다.
  *
  * ## 저장 버튼은 헤더 우측에 (작게)
  *
@@ -117,10 +124,10 @@ export const GameCard = ({ game, now, draftPick, saving, onSelect, onSave }: Gam
       <View style={styles.header}>
         <View style={styles.when}>
           <Text variant="button">{formatTime(game.startAt)}</Text>
-          <Text variant="body2" color="textDisabled">
-            ·
+          <Text variant="caption" color="textDisabled">
+            |
           </Text>
-          <Text variant="body2" color={status.tone}>
+          <Text variant="caption" color={status.tone}>
             {status.label}
           </Text>
         </View>
@@ -143,8 +150,7 @@ export const GameCard = ({ game, now, draftPick, saving, onSelect, onSave }: Gam
         away={
           <PickCell
             align="start"
-            selected={selected === 'away'}
-            won={outcome === 'away'}
+            fill={cellFill(selected === 'away', outcome === 'away')}
             {...pressHandler('away')}
           >
             <View style={styles.team}>
@@ -163,8 +169,7 @@ export const GameCard = ({ game, now, draftPick, saving, onSelect, onSave }: Gam
         draw={
           <PickCell
             narrow
-            selected={selected === 'draw'}
-            won={outcome === 'draw'}
+            fill={cellFill(selected === 'draw', outcome === 'draw')}
             {...pressHandler('draw')}
           >
             {showScore && (
@@ -182,8 +187,7 @@ export const GameCard = ({ game, now, draftPick, saving, onSelect, onSave }: Gam
         home={
           <PickCell
             align="end"
-            selected={selected === 'home'}
-            won={outcome === 'home'}
+            fill={cellFill(selected === 'home', outcome === 'home')}
             {...pressHandler('home')}
           >
             <View style={[styles.team, styles.teamHome]}>
@@ -205,6 +209,13 @@ export const GameCard = ({ game, now, draftPick, saving, onSelect, onSave }: Gam
     </Card>
   )
 }
+
+/**
+ * 결과가 나오면 적중한 칸이 초록, 그 전에는 내 선택이 파랑이다.
+ * 결과 후에 파랑을 쓰지 않는 이유는 `PickCell` 주석 참고.
+ */
+const cellFill = (selected: boolean, won: boolean): PickCellFill =>
+  won ? 'success' : selected ? 'primary' : 'none'
 
 /** 채워진 칸은 글자색까지 바꿔야 배경 틴트만으로 부족한 대비를 보완한다 */
 const cellTone = (selected: boolean, won: boolean) =>

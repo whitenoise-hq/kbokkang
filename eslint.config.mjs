@@ -37,6 +37,30 @@ export default tseslint.config(
     },
   },
   {
+    /**
+     * ⚠️ Hermes(RN 엔진)에 없는 최신 배열/객체 API 를 앱에서 막는다.
+     *
+     * 타입은 `lib: ESNext` 라 통과하고, lint·번들 export 도 통과한다. **앱을 켜야**
+     * `undefined is not a function` 으로 죽는다 — 실제로 예측 탭이 `toSorted` 로 죽었다.
+     * Node 에서 도는 어드민·크롤러는 써도 되므로 앱에만 적용한다.
+     */
+    files: ['apps/mobile/**/*.ts', 'apps/mobile/**/*.tsx', 'packages/shared/src/**/*.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        ...['toSorted', 'toReversed', 'toSpliced'].map((property) => ({
+          property,
+          message: `Hermes 에 ${property} 가 없다. [...arr] 복사 후 기존 메서드를 쓸 것.`,
+        })),
+        {
+          object: 'Object',
+          property: 'groupBy',
+          message: 'Hermes 에 Object.groupBy 가 없다. reduce 로 묶을 것.',
+        },
+      ],
+    },
+  },
+  {
     // 크롤러는 GitHub Actions 잡이다. 로그가 유일한 관측 수단이라 info 를 허용한다.
     files: ['apps/crawler/src/**/*.ts'],
     rules: {

@@ -15,7 +15,6 @@ export const GAME_STATUS_LABEL: Record<GameStatus, string> = {
   settled: '정산완료',
 } as const
 
-/** 예측 마감 시각 = 경기 시작 - 1시간 */
 /**
  * 예측 마감 = 경기 시작 - 30분.
  *

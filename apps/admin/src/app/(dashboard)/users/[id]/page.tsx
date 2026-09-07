@@ -144,8 +144,9 @@ const UserDetailPage = async ({ params }: { params: Promise<{ id: string }> }) =
               <p className="tabular text-success text-xl font-bold">{user.record.scoreHits}</p>
             </div>
             <div className="space-y-1">
+              {/* 연승은 하루 단위 전승이다(shared `bestStreak`). 숫자만 두면 경기 수로 읽힌다 */}
               <p className="text-muted-foreground text-xs">최고 연승</p>
-              <p className="tabular text-xl font-bold">{user.record.bestStreak}</p>
+              <p className="tabular text-xl font-bold">{user.record.bestStreak}일</p>
             </div>
           </CardContent>
         </Card>
