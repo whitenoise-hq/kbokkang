@@ -29,7 +29,7 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 3. **스키마 확정 + Supabase 세팅** — ✅ 완료
 4. 어드민 ↔ Supabase 연결(목업 → 실데이터, RLS·권한) — ✅ 완료
 5. 크롤링/정산(GitHub Actions) — ✅ 완료
-6. 앱(apps/mobile) — 여기도 화면 먼저, 연결 나중 — ⬅️ 다음
+6. 앱(apps/mobile) — 여기도 화면 먼저, 연결 나중 — 🔄 진행 중 (6-1 골격 완료)
 
 ## 공통 규칙 (중요)
 
@@ -80,7 +80,7 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - 당시 데이터는 `repositories` 의 fixture 기반 in-memory 구현이었다.
   4단계에서 `supabase` 구현으로 교체했고 화면 코드는 수정하지 않았다.
   **더미데이터는 5단계 이후 삭제했다** — 실 DB 가 붙었고 아무 곳도 참조하지 않았다.
-- `apps/mobile`은 6단계라 미생성.
+- `apps/mobile`은 6단계에서 생성했다(아래).
 
 **3·4단계 완료 — Supabase 세팅 + 스키마 + 인증 + 어드민 실연결**
 
@@ -209,6 +209,70 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - 생성 컬럼(`generated always as`)에 `timestamptz - interval` 을 쓸 수 없다 — STABLE 이라
   IMMUTABLE 조건 위반. 트리거를 쓴다.
 
-**다음: 6단계 — 앱(`apps/mobile`, Expo).** 여기도 화면 먼저, 연결 나중.
+**6단계 진행 중 — 앱(`apps/mobile`, Expo SDK 57)**
 
-미결: 10연차 할인율 확정, 구단 로고 사용 리스크 판단, 카드 생성 프롬프트 확정.
+`whitenoise-hq/app-dev-playbook` 을 기준으로 세팅했다. 새 앱 세팅·iOS 배포 절차는 그 레포 참조.
+
+**6-1 골격 완료** — Expo Router + 폰트 + TanStack Query + Supabase 클라이언트.
+`expo-doctor` 21/21 통과, iOS 번들 빌드 확인.
+
+```
+app/            _layout.tsx (폰트·Query·SafeArea) · index.tsx (임시)
+components/ui/  Text.tsx (폰트 굵기 함정 흡수) · Screen.tsx
+lib/            env.ts · supabase.ts · query-client.ts
+theme/          colors.ts (shared 재노출) · fonts.ts
+types/          assets.d.ts
+metro.config.js
+```
+
+남은 순서: 6-2 화면(목업) → 6-3 서버 RPC → 6-4 연결 → 6-5 인증 → 6-6 iOS 빌드.
+
+**앱 작업 시 주의 — 실제로 걸린 것들**
+
+- ⚠️⚠️ **React 는 워크스페이스에 한 버전만.** `node-linker=hoisted` 라 버전이 갈리면
+  RN 패키지마다 자기 react 사본이 생긴다(실측 32곳) — "Invalid hook call" 의 전형적 원인.
+  `react-native` peer 가 `^19.2.3` 이라 **19.2.8 로 통일**하고 루트 `pnpm.overrides` 로 고정했다.
+  `expo-doctor` 가 이걸 잡아준다 — 세팅 후 반드시 돌릴 것.
+  - `apps/mobile/package.json` 의 `expo.install.exclude` 에 `react`·`typescript` 를 넣어
+    `expo install --check` 가 되돌리지 못하게 했다(typescript 는 워크스페이스가 5.9.3 고정).
+- ⚠️ **모노레포는 `metro.config.js` 가 필요하다.** 기본 설정은 앱 폴더만 감시해서
+  `@kbokkang/shared`·`@kbokkang/assets` 를 번들하지 못한다. `watchFolders` 에 워크스페이스
+  루트, `nodeModulesPaths` 에 루트 `node_modules` 를 넣는다.
+- ⚠️ **SDK 57 에는 `babel.config.js` 가 없다.** 플레이북은 reanimated 4 용
+  `react-native-worklets/plugin` 을 수동 추가하라고 하지만, SDK 57 `babel-preset-expo` 가
+  자동 포함한다(템플릿이 babel 설정 없이 동작하는 것이 근거). 수동 추가는 중복 적용 위험.
+- ⚠️ **`app.json` 에 `newArchEnabled` 를 쓰지 말 것.** SDK 57 에서 제거된 속성이다
+  (신아키텍처가 기본). 넣으면 `expo-doctor` 가 스키마 오류로 잡는다.
+- ⚠️ **커스텀 폰트에 `fontWeight` 를 주면 시스템 폰트로 폴백된다.** 굵기별 파일이 별도
+  패밀리로 등록되기 때문이다. 화면에서 RN `Text` 를 직접 쓰지 말고 `components/ui/Text.tsx`
+  를 쓴다(토큰 → 패밀리 변환을 거기서 한 번만 한다).
+- ⚠️ **에셋 타입 선언은 직접 둔다**(`types/assets.d.ts`). Expo 가 만드는 `expo-env.d.ts` 는
+  gitignore 되고 `expo start` 전에는 없어서, 그것만 믿으면 깨끗한 체크아웃에서 타입체크가 깨진다.
+- ⚠️ **`.env` 를 바꾸면 `--clear` 가 필요하다.** `EXPO_PUBLIC_*` 는 빌드 시점에 번들로
+  인라인되므로 캐시가 남으면 옛 값이 계속 쓰인다.
+- 로컬 실행: `cd apps/mobile && pnpm ios`. **6-5 에서 애플 로그인을 넣으면 Expo Go 로는
+  안 되고** dev build 가 필요하다(`pnpm prebuild` → `expo run:ios`).
+- 화면에서 `supabase` 를 직접 부르지 않는다 — `hooks/` 의 TanStack Query 훅으로만 접근(플레이북).
+
+**앱 디자인 (확정)**
+
+- 토스 스타일. **라이트 고정**(다크모드 없음). 아이콘 Ionicons 만, **이모지 금지**.
+- **뽑기만 화려하다 — 의도된 예외.** 홈·도감·마이는 심심하게 두고 드라마를 뽑기에 몰아넣는다.
+  뽑기의 화려함을 다른 화면으로 가져오면 토스 감성이 깨지고 뽑기 임팩트도 죽는다.
+- 뽑기 = **카드팩 개봉**(포켓몬 TCG Pocket 방식). 팩 캐러셀 → 스와이프로 자르기 →
+  빛 방사 → 카드 솟아오름. 10연차는 팩 10개 일괄 자르기, 최고 등급을 마지막 순서로.
+  상세 스펙·필요 에셋은 `docs/04_앱디자인가이드.md` 7장.
+- 인증: **카카오(웹 OAuth) + 애플(네이티브)**. 소셜을 제공하면 Apple 도 필수(App Store 4.8).
+- ⚠️ 닉네임은 `public.users.nickname` + `is_nickname_available()` RPC 를 쓴다.
+  플레이북은 `user_metadata` 를 권하지만 그러면 **중복 체크가 불가능**하다.
+
+**앱에 필요한데 아직 없는 것 (6-3)**
+
+- `delete_account` RPC — **App Store 5.1.1(v) 필수.** 없으면 리젝된다.
+  `users`·`user_cards`·`predictions`·`draws`·`point_transactions` 를 전부 정리해야 한다.
+- `draw_cards` RPC — 뽑기(서버 추첨. 클라 신뢰 금지)
+- `sell_card` RPC — 중복 판매(`user_cards` 에 delete 권한이 없어 RPC 가 필요)
+- 예측 제출 시 마감(`predict_close_at`) 검증이 RLS 에 있는지 확인
+
+미결: 10연차 할인율 확정, 구단 로고 사용 리스크 판단, 카드 생성 프롬프트 확정,
+카드 프레임 레이아웃(통이미지 위 이름·번호·등급 배지 배치).

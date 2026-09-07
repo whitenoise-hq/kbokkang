@@ -25,5 +25,10 @@
     "turbo": "2.10.11",
     "typescript": "5.9.3",
     "typescript-eslint": "8.68.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.8"
+    }
   }
 }

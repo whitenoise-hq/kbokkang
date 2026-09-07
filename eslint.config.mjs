@@ -43,5 +43,15 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['info', 'warn', 'error'] }],
     },
   },
+  {
+    // 빌드 도구 설정 파일은 CommonJS(Node)다. metro/babel 이 이 형식만 받는다.
+    files: ['**/metro.config.js', '**/babel.config.js', '**/*.config.cjs'],
+    languageOptions: {
+      globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   prettier,
 )
