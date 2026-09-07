@@ -8,27 +8,25 @@ import {
 } from '@kbokkang/shared'
 import { COLORS, SPACING } from '@/theme/colors'
 import { Text } from '@/components/ui/Text'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { formatPoints } from '@/lib/format'
 import type { GameView } from '@/types/game'
 
 /**
- * 경기 카드 하단 — 저장 버튼 / 예측 완료 / 결과 / 취소 안내.
+ * 경기 카드 하단 — 예측 완료 / 결과 / 취소 안내.
  *
- * 팀 선택은 카드 본문의 2열 셀(`TeamPickCell`)이 담당한다. 여기는 **선택 이후**만 다룬다.
+ * 팀 선택은 카드 본문의 세그먼트(`PickSegment`)가, **저장 버튼은 카드 헤더**가 맡는다.
+ * 여기는 선택 이후의 **상태 문구**만 다룬다.
  *
- * ## 저장은 명시적이다 (경기 카드마다)
+ * ## 하단에 행을 늘리지 않는다
  *
- * 승패를 고르는 것만으로 저장하지 않는다 — 선택할 때마다 서버 요청이 나가면 낭비다.
- * **고른 값이 저장된 값과 다를 때만 저장 버튼이 나타난다.**
+ * 저장 버튼도 처음엔 여기 있었는데, 선택할 때마다 행이 생겨 **카드가 늘었다 줄었다** 했다.
+ * 그래서 헤더의 남은 공간으로 옮겼다(`GameCard` 참고).
  *
- * 화면 하단에 저장 버튼 하나를 두고 일괄 저장하는 방법도 있었지만 택하지 않았다:
- * **경기마다 마감 시각이 다르다**(일요일은 14:00·17:00 이 섞인다). 일괄 저장이면 고르는
- * 동안 일부가 마감될 수 있고, 저장 전에 앱을 닫으면 선택이 사라진다.
+ * 같은 이유로 **아무것도 안 고른 상태에서는 아무것도 렌더하지 않는다** — 셀 자체가 안내다.
+ * 저장 전(`dirty`)에도 렌더하지 않는다: 헤더의 저장 버튼이 이미 상태를 말한다.
  *
- * 아무것도 안 고른 상태에서는 아무것도 렌더하지 않는다 — 셀 자체가 안내다.
- * 안내 문구를 넣었더니 행이 하나 더 생겨 카드가 세로로 길어졌다.
+ * 결과 표시에 **배지를 쓰지 않는다.** 세그먼트에서 적중한 칸이 이미 초록으로 채워지므로
+ * 색 알약을 또 띄우면 강조가 두 번이다. `적중` + `+150P` 글자만 둔다(디자인 가이드 5장).
  *
  * ⚠️ 스코어 예측 **입력**은 다음 단계에서 붙인다. 지금은 입력된 스코어만 표시한다.
  *    승패 예측만으로도 유효하다(앱기획서 4장).
@@ -36,13 +34,11 @@ import type { GameView } from '@/types/game'
 export interface PredictFooterProps {
   readonly game: GameView
   readonly phase: GamePhase
-  /** 저장하지 않은 선택이 있는지 */
+  /** 저장하지 않은 선택이 있는지 — 있으면 헤더 버튼이 안내하므로 비워둔다 */
   readonly dirty: boolean
-  readonly saving: boolean
-  readonly onSave: () => void
 }
 
-/** 정산 결과 → 배지 색. 무효는 유저 탓이 아니므로 실패색을 쓰지 않는다. */
+/** 정산 결과 → 글자색. 무효는 유저 탓이 아니므로 실패색을 쓰지 않는다. */
 const RESULT_TONE = {
   pending: 'textAlt',
   win_hit: 'success',
@@ -51,7 +47,7 @@ const RESULT_TONE = {
   void: 'warning',
 } as const
 
-export const PredictFooter = ({ game, phase, dirty, saving, onSave }: PredictFooterProps) => {
+export const PredictFooter = ({ game, phase, dirty }: PredictFooterProps) => {
   const { myPrediction } = game
 
   if (phase === 'cancelled') {
@@ -65,20 +61,8 @@ export const PredictFooter = ({ game, phase, dirty, saving, onSave }: PredictFoo
   }
 
   if (canPredict(phase)) {
-    if (dirty) {
-      return (
-        <View style={styles.save}>
-          <Button
-            label={myPrediction === null ? '예측 저장' : '예측 변경'}
-            onPress={onSave}
-            loading={saving}
-            compact
-          />
-        </View>
-      )
-    }
-
-    if (myPrediction === null) return null
+    // 저장 전이면 헤더의 저장 버튼이 안내를 맡는다 — 여기서 또 말하면 행이 하나 늘어난다
+    if (dirty || myPrediction === null) return null
 
     return (
       <View style={styles.done}>
@@ -122,10 +106,9 @@ export const PredictFooter = ({ game, phase, dirty, saving, onSave }: PredictFoo
 
       <View style={styles.resultRight}>
         {myPrediction.result !== 'pending' && (
-          <Badge
-            label={PREDICTION_RESULT_LABEL[myPrediction.result]}
-            tone={RESULT_TONE[myPrediction.result]}
-          />
+          <Text variant="body2" color={RESULT_TONE[myPrediction.result]}>
+            {PREDICTION_RESULT_LABEL[myPrediction.result]}
+          </Text>
         )}
         {myPrediction.earnedPoints !== null && myPrediction.earnedPoints > 0 && (
           <Text variant="body2" color="success">
@@ -139,7 +122,6 @@ export const PredictFooter = ({ game, phase, dirty, saving, onSave }: PredictFoo
 
 const styles = StyleSheet.create({
   line: { paddingTop: SPACING.sm + 2 },
-  save: { paddingTop: SPACING.sm + 2 },
   done: {
     flexDirection: 'row',
     alignItems: 'center',

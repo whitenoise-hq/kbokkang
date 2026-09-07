@@ -15,6 +15,10 @@ export interface GameTeamView {
 
 export interface MyPredictionView {
   readonly pickWinner: PredictionPick
+  /**
+   * 스코어 예측. **입력 UI 는 보류**라 앱에서는 항상 null 이다(`GameCard` 주석 참고).
+   * DB·정산이 이미 받으므로 필드는 남겨둔다 — 켤 때 화면만 붙이면 된다.
+   */
   readonly pickHomeScore: number | null
   readonly pickAwayScore: number | null
   readonly result: PredictionResult
@@ -25,7 +29,7 @@ export interface GameView {
   readonly id: string
   /** ISO */
   readonly startAt: string
-  /** ISO — 시작 1시간 전 */
+  /** ISO — 시작 30분 전 */
   readonly predictCloseAt: string
   readonly status: GameStatus
   readonly cancelled: boolean

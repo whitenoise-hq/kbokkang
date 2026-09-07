@@ -26,6 +26,8 @@ import type { GameView } from '@/types/game'
  * 카드가 자기 draft 를 `useState` 로 가지면 FlatList 윈도잉으로 화면 밖에 나갔다 돌아올 때
  * 선택이 사라질 수 있다. 그래서 **화면이 gameId → 선택 맵으로 관리**한다.
  *
+ * ⚠️ **스코어 예측 입력은 없다(보류).** 승패만 받는다 — `GameCard` 주석 참고.
+ *
  * ⚠️ 지금은 목업이다. 6-4 에서 TanStack Query 훅으로 교체하고 `mocks/games.ts` 를 지운다.
  *    저장도 mutation 으로 바뀐다 — 그때 `saving` 은 mutation 의 상태를 쓴다.
  */
@@ -54,11 +56,12 @@ const HomeScreen = () => {
             ? {
                 ...game,
                 myPrediction: {
-                  pickHomeScore: game.myPrediction?.pickHomeScore ?? null,
-                  pickAwayScore: game.myPrediction?.pickAwayScore ?? null,
+                  pickWinner: pick,
+                  // 스코어 예측은 보류 — 항상 null 을 보낸다(GameCard 주석 참고)
+                  pickHomeScore: null,
+                  pickAwayScore: null,
                   result: 'pending',
                   earnedPoints: null,
-                  pickWinner: pick,
                 },
               }
             : game,

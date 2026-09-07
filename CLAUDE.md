@@ -221,7 +221,14 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 - 탭 **5개**(홈·예측·뽑기·도감·마이). 기획서는 4개였는데 예측 기록·성적을 분리했다.
   홈은 **당일 경기만** 보여주고 상단에 어제 결과 한 줄 배너를 둔다.
 - 홈 경기 카드는 **3열**(원정/무승부/홈)이고 셀 자체가 선택지다.
-  저장은 **경기 카드마다 명시적**(선택만으로 저장하지 않는다).
+  저장은 **경기 카드마다 명시적**(선택만으로 저장하지 않는다) — 헤더 우측 작은 알약.
+- **스코어 예측 입력은 보류**(승패만 받는다). 바텀시트+스텝퍼까지 만들었다가 걷어냈다 —
+  적중이 사실상 안 나는데 복잡도가 컸다. **DB·정산·스키마는 그대로**라 켤 때 화면만
+  붙이면 된다(앱기획서 4장).
+- **테두리를 쓰지 않는다(전 화면 원칙).** 여백 → 배경 계층 → 그림자 → divider 순으로
+  구분하고 `borderWidth` 는 쓰지 않는다. 선택도 배경 틴트(`primaryLight`/`successLight`)로
+  알린다. 카드·칸·배지에 각각 선을 뒀더니 "액자 안의 액자"가 되어 정신사나웠다.
+  상세는 `docs/04_앱디자인가이드.md` 5장.
 - 남은 화면: 예측 · 도감 · 뽑기 · 온보딩.
 
 ```
@@ -229,8 +236,8 @@ app/
   _layout.tsx        폰트 로드 · Query · SafeArea
   (tabs)/            _layout.tsx(탭 5개) · index(홈) · predict · draw · dex · my
 components/
-  ui/                Text(폰트 함정 흡수) · Screen · Card · Badge · Button
-  game/              GameCard · PickCell · TeamMark · PredictFooter ·
+  ui/                Text(폰트 함정 흡수) · Screen · Card · Button
+  game/              GameCard · PickSegment · PickCell · TeamMark · PredictFooter ·
                      YesterdayBanner · game-status-view
 hooks/               useServerNow (서버 시각 보정)
 lib/                 env · supabase · query-client · format

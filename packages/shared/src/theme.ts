@@ -31,6 +31,8 @@ export const COLORS = {
 
   /** 적중·성공 */
   success: '#00B26E',
+  /** 초록 배경(적중 표시 등). `primaryLight` 와 같은 농도로 맞춘다 */
+  successLight: '#E5F7EF',
   /** 실패·경고·포인트 차감 */
   danger: '#F04452',
   /** 집계중 등 대기 상태 */
@@ -60,6 +62,8 @@ export const TYPOGRAPHY = {
   body2: { fontSize: 14, weight: 'regular' },
   caption: { fontSize: 12, weight: 'regular' },
   button: { fontSize: 16, weight: 'semibold' },
+  /** 카드 안 보조 버튼 — 헤더 우측 알약 등. `button` 은 카드 안에서 과하다 */
+  buttonSmall: { fontSize: 13, weight: 'semibold' },
 } as const satisfies Record<string, TypeStyle>
 
 export type TypographyToken = keyof typeof TYPOGRAPHY

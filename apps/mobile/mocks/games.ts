@@ -1,3 +1,4 @@
+import { PREDICT_CLOSE_OFFSET_MINUTES } from '@kbokkang/shared'
 import type { YesterdaySummary } from '@/components/game/YesterdayBanner'
 import type { GameView } from '@/types/game'
 
@@ -7,11 +8,11 @@ import type { GameView } from '@/types/game'
  * ⚠️ **6-4 에서 TanStack Query 훅으로 교체한 뒤 이 파일을 지운다.** 어드민에서 fixture 를
  * 실 DB 연결 후에도 남겨뒀다가 대시보드에 날짜가 하드코딩된 채로 방치된 일이 있었다.
  *
- * **홈은 당일 경기만 보여준다.** 그래도 모든 단계를 한 화면에서 볼 수 있다 —
- * 일요일 14:00 경기는 17시경 정산이 끝나므로 당일에도 settled·cancelled 가 나온다.
- * 그래서 낮경기(-300분)로 그 상태들을 만들어 뒀다.
+ * **홈은 당일 경기만 보여준다.** 지난 날짜 예측은 **예측 탭**이 보여준다(홈에 섞지 않는다).
  *
- * 지난 날짜 예측은 **예측 탭**이 보여준다(홈에 섞지 않는다).
+ * 목업은 **한 화면에 들어오는 5경기**만 둔다 — 예측 가능 / 예측함 / 마감 임박 / 경기중 /
+ * 집계중. 정산 완료·무승부·취소 케이스까지 9개를 늘어놨더니 화면이 목업 목록처럼 보여
+ * 디자인 판단이 안 됐다. 정산 이후 표시는 **예측 탭**에서 확인한다.
  *
  * 시각은 **실행 시점 기준 상대값**으로 만든다. 고정 문자열로 두면 하루만 지나도
  * 전부 "마감"으로 보여서 화면을 확인할 수 없다.
@@ -34,8 +35,9 @@ const TEAMS = {
 const minutesFromNow = (minutes: number): string =>
   new Date(Date.now() + minutes * 60 * 1000).toISOString()
 
-/** 마감은 시작 1시간 전 */
-const closeFor = (startMinutes: number): string => minutesFromNow(startMinutes - 60)
+/** 마감은 시작 30분 전 — DB 트리거와 같은 값을 쓴다 */
+const closeFor = (startMinutes: number): string =>
+  minutesFromNow(startMinutes - PREDICT_CLOSE_OFFSET_MINUTES)
 
 export const mockGames = (): readonly GameView[] => [
   {
@@ -64,8 +66,8 @@ export const mockGames = (): readonly GameView[] => [
     awayScore: null,
     myPrediction: {
       pickWinner: 'home',
-      pickHomeScore: 5,
-      pickAwayScore: 3,
+      pickHomeScore: null,
+      pickAwayScore: null,
       result: 'pending',
       earnedPoints: null,
     },
@@ -119,82 +121,6 @@ export const mockGames = (): readonly GameView[] => [
       pickAwayScore: null,
       result: 'pending',
       earnedPoints: null,
-    },
-  },
-  {
-    // 정산 완료 — 스코어 적중 (오늘 낮경기)
-    id: 'g6',
-    startAt: minutesFromNow(-300),
-    predictCloseAt: closeFor(-300),
-    status: 'settled',
-    cancelled: false,
-    home: TEAMS.두산,
-    away: TEAMS.LG,
-    homeScore: 5,
-    awayScore: 1,
-    myPrediction: {
-      pickWinner: 'home',
-      pickHomeScore: 5,
-      pickAwayScore: 1,
-      result: 'score_hit',
-      earnedPoints: 150,
-    },
-  },
-  {
-    // 정산 완료 — 미적중 (오늘 낮경기)
-    id: 'g7',
-    startAt: minutesFromNow(-300),
-    predictCloseAt: closeFor(-300),
-    status: 'settled',
-    cancelled: false,
-    home: TEAMS.한화,
-    away: TEAMS.KT,
-    homeScore: 2,
-    awayScore: 7,
-    myPrediction: {
-      pickWinner: 'home',
-      pickHomeScore: null,
-      pickAwayScore: null,
-      result: 'miss',
-      earnedPoints: 0,
-    },
-  },
-  {
-    // 무승부 정산 — 무승부를 골라 적중 (KBO 는 무승부가 실제로 있다: 실측 3:3, 0:0)
-    id: 'g9',
-    startAt: minutesFromNow(-300),
-    predictCloseAt: closeFor(-300),
-    status: 'settled',
-    cancelled: false,
-    home: TEAMS.롯데,
-    away: TEAMS.키움,
-    homeScore: 3,
-    awayScore: 3,
-    myPrediction: {
-      pickWinner: 'draw',
-      pickHomeScore: null,
-      pickAwayScore: null,
-      result: 'win_hit',
-      earnedPoints: 30,
-    },
-  },
-  {
-    // 우천 취소 — 예측은 무효 (오늘 낮경기)
-    id: 'g8',
-    startAt: minutesFromNow(-300),
-    predictCloseAt: closeFor(-300),
-    status: 'settled',
-    cancelled: true,
-    home: TEAMS.NC,
-    away: TEAMS.삼성,
-    homeScore: null,
-    awayScore: null,
-    myPrediction: {
-      pickWinner: 'away',
-      pickHomeScore: null,
-      pickAwayScore: null,
-      result: 'void',
-      earnedPoints: 0,
     },
   },
 ]
