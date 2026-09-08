@@ -29,7 +29,13 @@ export const CARD_SELL_PRICE: Record<CardGrade, number> = {
 
 export const sellPriceOf = (grade: CardGrade): number => CARD_SELL_PRICE[grade]
 
-/** 중복 획득 시 환급 포인트 (판매가와 동일) */
+/**
+ * 중복 획득 시 환급 포인트 (판매가와 동일).
+ *
+ * ⚠️ **앱은 쓰지 않는다.** 자동 중복 환급은 폐지했다 — 중복은 카드로 쌓이고 유저가
+ * 판다(통합기획서 6장). 그대로 두면 같은 중복으로 등급가를 두 번 받는다.
+ * DB 컬럼(`draws.refund_points`)과 어드민 표시가 남아 있어 함수는 유지한다.
+ */
 export const duplicateRefundOf = (grade: CardGrade): number => CARD_SELL_PRICE[grade]
 
 /** 도감의 마지막 1장은 판매 불가 — 여분만 판매 가능 */

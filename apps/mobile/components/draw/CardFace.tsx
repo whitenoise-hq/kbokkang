@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native'
 import { CARD_GRADE_META, gradeColor } from '@kbokkang/shared'
 import { COLORS, RADIUS, SPACING } from '@/theme/colors'
 import { Text } from '@/components/ui/Text'
-import type { DrawnCardView } from '@/types/draw'
+import type { CardFaceView } from '@/types/card'
 
 /**
  * 카드 한 장의 앞면 — 개봉 결과와 도감이 함께 쓴다.
@@ -19,9 +19,13 @@ import type { DrawnCardView } from '@/types/draw'
  *
  * 카드 비율은 **0.7**(실물 트레이딩 카드 63×88mm ≈ 0.716)로 고정한다. 폭만 받는다 —
  * 높이를 밖에서 주면 화면마다 카드 모양이 달라진다.
+ *
+ * ⚠️ **"내 상태"(중복 여부·보유 수량)를 받지 않는다**(`CardFaceView` 주석). 중복 배지는
+ *    뽑기 화면이, 보유 수량은 도감이 각자 얹는다. 뽑기 결과 타입을 그대로 받았더니
+ *    도감 상세에서 `isDuplicate: false` 같은 의미 없는 값을 채워 넣게 됐다.
  */
 export interface CardFaceProps {
-  readonly card: DrawnCardView
+  readonly card: CardFaceView
   readonly width: number
 }
 

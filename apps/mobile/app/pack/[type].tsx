@@ -19,7 +19,7 @@ import {
   isDrawType,
   type DrawType,
 } from '@kbokkang/shared'
-import { COLORS, DURATION, SPACING } from '@/theme/colors'
+import { COLORS, DURATION, RADIUS, SPACING } from '@/theme/colors'
 import { Button } from '@/components/ui/Button'
 import { Text } from '@/components/ui/Text'
 import { PackPartImage, packPartHeight } from '@/components/draw/PackImage'
@@ -116,6 +116,8 @@ const PackOpenScreen = () => {
   const [points, setPoints] = useState(MOCK_POINTS)
   const [phase, setPhase] = useState<Phase>('choose')
   const [cards, setCards] = useState<readonly DrawnCardView[]>([])
+  /** 지금 몇 번째 카드를 보여주는지 — 10장 뽑기는 한 장씩 넘긴다 */
+  const [revealIndex, setRevealIndex] = useState(0)
 
   /** 장수를 고른 뒤 팩이 커지는 값 0~1 */
   const armed = useRef(new Animated.Value(0)).current
@@ -127,7 +129,8 @@ const PackOpenScreen = () => {
   const flash = useRef(new Animated.Value(0)).current
   /** "옆으로 미세요" 하이라이트 띠가 반복 통과하는 값 */
   const shimmer = useRef(new Animated.Value(0)).current
-  const cardsIn = useRef(new Animated.Value(0)).current
+  /** 지금 보여주는 카드가 떠오르는 값 */
+  const cardIn = useRef(new Animated.Value(0)).current
 
   const type: DrawType = isDrawType(params.type) ? params.type : 'normal'
   const packWidth = Math.min(screenWidth * 0.56, 220)
@@ -143,6 +146,7 @@ const PackOpenScreen = () => {
     // 6-4 에서 `draw_cards` RPC 로 교체한다. 포인트 차감도 서버 트랜잭션에서 일어난다.
     setPoints((previous) => previous - cost)
     setCards(orderForReveal(mockDraw(type, count)))
+    setRevealIndex(0)
     setPhase('ready')
 
     // 팩이 커지면서 절단선이 나타난다 — 이게 없으면 버튼만 바뀌어서
@@ -155,6 +159,16 @@ const PackOpenScreen = () => {
       Animated.timing(shimmer, { toValue: 1, duration: 1500, useNativeDriver: true }),
     ).start()
   }
+
+  /** 카드 한 장이 아래에서 솟아오르는 연출. 넘길 때마다 다시 돌린다 */
+  const riseCard = useCallback(() => {
+    cardIn.setValue(0)
+    Animated.timing(cardIn, {
+      toValue: 1,
+      duration: DURATION.normal,
+      useNativeDriver: true,
+    }).start()
+  }, [cardIn])
 
   const open = useCallback(() => {
     // 팩을 **남겨둔 채** 절단 연출을 보여준다. 여기서 바로 `revealed` 로 가면 팩이
@@ -179,13 +193,9 @@ const PackOpenScreen = () => {
       if (!finished) return
 
       setPhase('revealed')
-      Animated.timing(cardsIn, {
-        toValue: 1,
-        duration: DURATION.normal,
-        useNativeDriver: true,
-      }).start()
+      riseCard()
     })
-  }, [cardsIn, cut, flash, reveal, shimmer])
+  }, [cut, flash, reveal, riseCard, shimmer])
 
   /**
    * 가로로 밀어서 자른다. **세로 움직임보다 가로가 클 때만** 제스처를 잡는다 —
@@ -211,6 +221,15 @@ const PackOpenScreen = () => {
     [cut, open, packWidth],
   )
 
+  /** 마지막 카드까지 봤는가 — 다 보기 전에는 나가는 버튼을 감춘다 */
+  const allRevealed = revealIndex >= cards.length - 1
+
+  const showNext = () => {
+    if (allRevealed) return
+    setRevealIndex((previous) => previous + 1)
+    riseCard()
+  }
+
   const single = DRAW_COST_SINGLE[type]
   const ten = DRAW_COST_TEN[type]
   const flashOpacity = flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] })
@@ -224,19 +243,32 @@ const PackOpenScreen = () => {
         <Text variant="buttonSmall" style={styles.stageText}>
           {formatPoints(points)}
         </Text>
-        <Pressable
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel="닫기"
-          hitSlop={12}
-        >
-          <Ionicons name="close" size={26} color={COLORS.background} />
-        </Pressable>
+        {/*
+          카드를 다 보기 전에는 닫기를 감춘다 — 실수로 눌러 결과를 못 보고 나가면
+          되돌릴 방법이 없다(포인트는 이미 빠졌다). 넘기면 바로 다시 나타난다.
+        */}
+        {(phase !== 'revealed' || allRevealed) && (
+          <Pressable
+            onPress={close}
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+            hitSlop={12}
+          >
+            <Ionicons name="close" size={26} color={COLORS.background} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.center}>
         {phase === 'revealed' ? (
-          <RevealedCards cards={cards} progress={cardsIn} screenWidth={screenWidth} />
+          <RevealedCard
+            card={cards[revealIndex] ?? null}
+            index={revealIndex}
+            total={cards.length}
+            progress={cardIn}
+            width={Math.min(screenWidth * 0.62, 260)}
+            onNext={showNext}
+          />
         ) : (
           <Pack
             type={type}
@@ -285,21 +317,22 @@ const PackOpenScreen = () => {
           </View>
         )}
 
-        {phase === 'revealed' && (
+        {phase === 'revealed' && allRevealed && (
           <>
-            <RefundLine cards={cards} />
+            <ExtrasHint cards={cards} />
+            {/* 닫기는 우상단 X 가 이미 있다 — 버튼 세 개를 쌓으면 결과 카드가 밀려 올라간다 */}
             <Button
               label="한 번 더"
               onPress={() => {
                 armed.setValue(0)
                 cut.setValue(0)
                 reveal.setValue(0)
-                cardsIn.setValue(0)
+                cardIn.setValue(0)
                 setCards([])
+                setRevealIndex(0)
                 setPhase('choose')
               }}
             />
-            <Button label="닫기" onPress={close} variant="secondary" />
           </>
         )}
       </View>
@@ -393,7 +426,14 @@ const Pack = ({
         </Animated.View>
 
         <Burst progress={reveal} width={width} top={seamY} />
-        <CutLine progress={cut} armed={armed} shimmer={shimmer} width={width} top={seamY} />
+        <CutLine
+          progress={cut}
+          armed={armed}
+          shimmer={shimmer}
+          reveal={reveal}
+          width={width}
+          top={seamY}
+        />
       </View>
     </Animated.View>
   )
@@ -418,18 +458,30 @@ const CutLine = ({
   progress,
   armed,
   shimmer,
+  reveal,
   width,
   top,
 }: {
   readonly progress: Animated.Value
   readonly armed: Animated.Value
   readonly shimmer: Animated.Value
+  readonly reveal: Animated.Value
   readonly width: number
   readonly top: number
 }) => {
   // 드래그를 시작하면 안내 띠를 감춘다 — 실제 절단선과 겹쳐 보이면 혼란스럽다
   const idle = progress.interpolate({
     inputRange: [0, 0.04],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  })
+
+  /**
+   * 잘리기 시작하면 **선 전체가 즉시 사라진다.** 팩이 벌어지는 동안 절단선이 남아 있으면
+   * 아직 안 잘린 것처럼 보인다(실제로 그렇게 보였다). 벌어진 틈에 선이 떠 있는 셈이다.
+   */
+  const gone = reveal.interpolate({
+    inputRange: [0, 0.1],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   })
@@ -449,7 +501,10 @@ const CutLine = ({
       style={[styles.cutLayer, { top: top - CUT_LAYER_HEIGHT / 2, width }]}
     >
       <Animated.View
-        style={[styles.cutTrack, { width, opacity: Animated.multiply(armed, 0.32) }]}
+        style={[
+          styles.cutTrack,
+          { width, opacity: Animated.multiply(Animated.multiply(armed, gone), 0.32) },
+        ]}
       />
 
       <Animated.View
@@ -463,8 +518,15 @@ const CutLine = ({
         ]}
       />
 
-      <Animated.View style={[styles.cutGlow, { width, transform: [{ scaleX: progress }] }]} />
-      <Animated.View style={[styles.cutFill, { width, transform: [{ scaleX: progress }] }]} />
+      <Animated.View
+        style={[
+          styles.cutGlow,
+          { width, opacity: Animated.multiply(gone, 0.28), transform: [{ scaleX: progress }] },
+        ]}
+      />
+      <Animated.View
+        style={[styles.cutFill, { width, opacity: gone, transform: [{ scaleX: progress }] }]}
+      />
     </View>
   )
 }
@@ -542,78 +604,92 @@ const Burst = ({
 }
 
 /**
- * 결과 카드. 1장이면 크게 한 장, 10연차면 격자로 깔고 **인덱스만큼 늦게** 떠오르게 해서
- * 순차 공개를 만든다 — 10번 반복 개봉은 지루하다(가이드 7.1 ③).
+ * 결과 카드 — **한 장씩** 보여준다.
+ *
+ * 10장 뽑기를 격자로 한 번에 깔아 봤지만 바꿨다. 카드가 작아져 등급색밖에 안 보이고,
+ * **무엇을 뽑았는지 한 장도 제대로 못 본다.** 뽑기의 재미는 한 장 한 장 확인하는 데
+ * 있어서 격자는 결과 요약표처럼 읽혔다.
+ *
+ * 탭하면 다음 장으로 넘어간다. `orderForReveal` 이 **최고 등급을 마지막**에 두므로
+ * 넘길수록 기대가 커진다(가이드 7.1 ③).
+ *
+ * 마지막 장까지 보기 전에는 부모가 `한 번 더`·닫기를 감춘다 — 다 보지 않고 나가면
+ * 포인트는 이미 빠졌는데 결과를 되돌려 볼 방법이 없다.
  */
-const RevealedCards = ({
-  cards,
-  progress,
-  screenWidth,
-}: {
-  readonly cards: readonly DrawnCardView[]
-  readonly progress: Animated.Value
-  readonly screenWidth: number
-}) => {
-  const single = cards.length === 1
-  const width = single ? Math.min(screenWidth * 0.62, 260) : (screenWidth - SPACING.md * 2 - 24) / 5
-
-  return (
-    <View style={single ? styles.singleWrap : styles.grid}>
-      {cards.map((card, index) => (
-        <RevealedCard
-          key={card.id}
-          card={card}
-          width={width}
-          progress={progress}
-          index={single ? 0 : index}
-          total={cards.length}
-        />
-      ))}
-    </View>
-  )
-}
-
 const RevealedCard = ({
   card,
-  width,
-  progress,
   index,
   total,
+  progress,
+  width,
+  onNext,
 }: {
-  readonly card: DrawnCardView
-  readonly width: number
-  readonly progress: Animated.Value
+  readonly card: DrawnCardView | null
   readonly index: number
   readonly total: number
+  readonly progress: Animated.Value
+  readonly width: number
+  readonly onNext: () => void
 }) => {
-  // 한 애니메이션 값을 나눠 써서 순차 공개를 만든다 — 카드마다 값을 만들면 10개가 각자 돈다
-  const slot = total <= 1 ? 0 : index / total
-  const from = slot * 0.7
-  const inputRange = [from, from + 0.3]
+  if (card === null) return null
 
-  const opacity = progress.interpolate({ inputRange, outputRange: [0, 1] })
-  const translateY = progress.interpolate({ inputRange, outputRange: [28, 0] })
+  const last = index >= total - 1
+  const opacity = progress
+  const translateY = progress.interpolate({ inputRange: [0, 1], outputRange: [36, 0] })
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] })
 
   return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      <CardFace card={card} width={width} />
-      {card.isDuplicate && (
-        <Text variant="caption" align="center" style={styles.duplicate}>
-          +{formatPoints(card.refundPoints)}
+    <Pressable
+      onPress={onNext}
+      disabled={last}
+      accessibilityRole="button"
+      accessibilityLabel={last ? card.name : `${card.name}, 다음 카드 보기`}
+      style={styles.revealWrap}
+    >
+      {total > 1 && (
+        <Text variant="buttonSmall" style={styles.counter}>
+          {index + 1} / {total}
         </Text>
       )}
-    </Animated.View>
+
+      <Animated.View style={{ opacity, transform: [{ translateY }, { scale }] }}>
+        <CardFace card={card} width={width} />
+        {/* 중복은 우상단 "보유" 배지로 알린다(가이드 7.1 ②). 포인트는 도감에서 팔아야 들어온다 */}
+        {card.isDuplicate && (
+          <View style={styles.ownedBadge}>
+            <Text variant="caption" style={styles.ownedBadgeText}>
+              보유
+            </Text>
+          </View>
+        )}
+      </Animated.View>
+
+      {!last && (
+        <Text variant="body2" align="center" style={styles.hint}>
+          탭해서 다음 카드
+        </Text>
+      )}
+    </Pressable>
   )
 }
 
-/** 중복 환급 합계. 0 이면 아무것도 쓰지 않는다 — 없는 값을 0 으로 보여줄 이유가 없다 */
-const RefundLine = ({ cards }: { readonly cards: readonly DrawnCardView[] }) => {
-  const refund = cards.reduce((sum, card) => sum + card.refundPoints, 0)
-  if (refund === 0) return null
+/**
+ * 중복이 나왔음을 한 줄로 알린다. **판매 버튼은 두지 않는다.**
+ *
+ * 결과 화면에서 바로 팔 수 있게 만들어 봤지만 걷어냈다 — 개봉 직후는 **무엇을 뽑았는지
+ * 보는 순간**이다. 그 자리에 "파세요" 버튼이 있으면 방금 얻은 카드를 처분하라고
+ * 재촉하는 셈이고, 화면의 초점이 결과에서 포인트로 옮겨간다.
+ *
+ * 판매는 **도감에서만** 한다(`app/card/[dexNo].tsx`) — 여분이 있다는 사실만 알려 주고
+ * 처분은 도감을 정리할 때 하게 한다.
+ */
+const ExtrasHint = ({ cards }: { readonly cards: readonly DrawnCardView[] }) => {
+  const extras = cards.filter((card) => card.isDuplicate).length
+  if (extras === 0) return null
 
   return (
     <Text variant="body2" align="center" style={styles.hint}>
-      중복 {cards.filter((card) => card.isDuplicate).length}장 · +{formatPoints(refund)} 환급
+      중복 {extras}장 · 도감에서 여분을 판매할 수 있습니다
     </Text>
   )
 }
@@ -645,7 +721,6 @@ const styles = StyleSheet.create({
     height: CUT_LINE_HEIGHT * 3,
     borderRadius: CUT_LINE_HEIGHT * 1.5,
     backgroundColor: COLORS.background,
-    opacity: 0.28,
     transformOrigin: 'left',
   },
   cutFill: {
@@ -669,14 +744,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: COLORS.background,
   },
-  singleWrap: { alignItems: 'center' },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: SPACING.sm - 2,
-    paddingHorizontal: SPACING.md,
-  },
+  revealWrap: { alignItems: 'center', gap: SPACING.md },
+  counter: { color: COLORS.background, opacity: 0.6, fontVariant: ['tabular-nums'] },
   actions: {
     gap: SPACING.sm + 2,
     paddingHorizontal: SPACING.md,
@@ -691,7 +760,15 @@ const styles = StyleSheet.create({
   hint: { color: COLORS.background, opacity: 0.7 },
   swipeHint: { alignItems: 'center', gap: SPACING.xs, paddingBottom: SPACING.md },
   swipeHintRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  duplicate: { color: COLORS.success, paddingTop: SPACING.xs },
+  ownedBadge: {
+    position: 'absolute',
+    top: SPACING.sm,
+    right: SPACING.sm,
+    paddingHorizontal: SPACING.sm - 1,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.textStrong,
+  },
+  ownedBadgeText: { color: COLORS.background, lineHeight: 18 },
 })
 
 export default PackOpenScreen

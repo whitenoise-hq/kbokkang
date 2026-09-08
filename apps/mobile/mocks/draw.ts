@@ -52,7 +52,7 @@ const drawOne = (type: DrawType): DrawnCardView => {
   const name = names[Math.floor(Math.random() * names.length)] ?? '카드'
   sequence += 1
 
-  // 중복은 실제로 흔하다(일반 등급이 60%) — 환급 표시를 확인할 수 있어야 한다
+  // 중복은 실제로 흔하다(일반 등급이 60%) — 여분 판매 버튼을 확인할 수 있어야 한다
   const isDuplicate = grade === 'normal' && Math.random() < 0.5
 
   return {
@@ -63,7 +63,6 @@ const drawOne = (type: DrawType): DrawnCardView => {
     dexNo: `${CARD_GRADE_META[grade].prefix}${String(sequence % 30).padStart(2, '0')}`,
     imageUrl: null,
     isDuplicate,
-    refundPoints: isDuplicate ? 5 : 0,
   }
 }
 
