@@ -221,8 +221,17 @@ const PackOpenScreen = () => {
     [cut, open, packWidth],
   )
 
-  /** 마지막 카드까지 봤는가 — 다 보기 전에는 나가는 버튼을 감춘다 */
+  /** 마지막 카드까지 봤는가 */
   const allRevealed = revealIndex >= cards.length - 1
+
+  /**
+   * 닫기를 보여줄지.
+   *
+   * **포인트를 쓴 순간부터 카드를 다 볼 때까지 감춘다.** 장수를 고르면 포인트가 빠지는데
+   * 그 직후에 X 가 있으면 실수로 눌러 결과를 못 보고 나가게 되고, 되돌릴 방법이 없다.
+   * 고르기 전(`choose`)에는 아무것도 쓰지 않았으니 언제든 나갈 수 있어야 한다.
+   */
+  const canClose = phase === 'choose' || (phase === 'revealed' && allRevealed)
 
   const showNext = () => {
     if (allRevealed) return
@@ -243,11 +252,7 @@ const PackOpenScreen = () => {
         <Text variant="buttonSmall" style={styles.stageText}>
           {formatPoints(points)}
         </Text>
-        {/*
-          카드를 다 보기 전에는 닫기를 감춘다 — 실수로 눌러 결과를 못 보고 나가면
-          되돌릴 방법이 없다(포인트는 이미 빠졌다). 넘기면 바로 다시 나타난다.
-        */}
-        {(phase !== 'revealed' || allRevealed) && (
+        {canClose && (
           <Pressable
             onPress={close}
             accessibilityRole="button"

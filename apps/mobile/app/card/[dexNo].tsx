@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
 import {
   CARD_GRADE_META,
   CARD_TYPE_LABEL,
@@ -14,6 +13,7 @@ import { COLORS, RADIUS, SCREEN_PADDING, SECTION_GAP, SPACING } from '@/theme/co
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Screen } from '@/components/ui/Screen'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Text } from '@/components/ui/Text'
 import { CardFace } from '@/components/draw/CardFace'
 import { formatPoints } from '@/lib/format'
@@ -61,7 +61,7 @@ const CardDetailScreen = () => {
   if (card === null) {
     return (
       <Screen>
-        <Header />
+        <ScreenHeader />
         <View style={styles.missing}>
           <Text variant="body1" color="textAlt" align="center">
             카드를 찾을 수 없습니다
@@ -80,7 +80,7 @@ const CardDetailScreen = () => {
 
   return (
     <Screen flush>
-      <Header />
+      <ScreenHeader />
 
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.art}>
@@ -146,22 +146,6 @@ const CardDetailScreen = () => {
   )
 }
 
-/** 전역 헤더를 끄고 있어(`app/_layout.tsx`) 뒤로가기를 화면이 직접 둔다 */
-const Header = () => (
-  <View style={styles.header}>
-    <Pressable
-      onPress={() => {
-        router.back()
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="뒤로"
-      hitSlop={12}
-    >
-      <Ionicons name="chevron-back" size={26} color={COLORS.textStrong} />
-    </Pressable>
-  </View>
-)
-
 const Row = ({
   label,
   children,
@@ -180,7 +164,6 @@ const Row = ({
 const Divider = () => <View style={styles.divider} />
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: SPACING.sm + 2, paddingVertical: SPACING.sm },
   body: { paddingHorizontal: SCREEN_PADDING, paddingBottom: SECTION_GAP, gap: SECTION_GAP },
   art: { alignItems: 'center', paddingTop: SPACING.sm },
   row: {
