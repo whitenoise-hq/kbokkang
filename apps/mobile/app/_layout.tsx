@@ -34,7 +34,24 @@ const RootLayout = () => {
               headerShown: false,
               contentStyle: { backgroundColor: COLORS.surface },
             }}
-          />
+          >
+            <Stack.Screen name="(tabs)" />
+            {/*
+              ⚠️ 화면 옵션을 **여기서** 선언한다. 화면 컴포넌트 안에서
+              `<Stack.Screen options={{ presentation: ... }} />` 로 주면 리렌더마다
+              옵션이 다시 적용돼 **화면이 재마운트**되고 `useState` 가 날아간다
+              (개봉 화면에서 장수를 골라도 처음 상태로 되돌아갔다).
+            */}
+            <Stack.Screen
+              name="pack/[type]"
+              options={{
+                // 탭 바를 가리고 전체화면으로 — 개봉 연출에 집중시킨다(가이드 7.1)
+                presentation: 'fullScreenModal',
+                animation: 'slide_from_bottom',
+                contentStyle: { backgroundColor: COLORS.drawStage },
+              }}
+            />
+          </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

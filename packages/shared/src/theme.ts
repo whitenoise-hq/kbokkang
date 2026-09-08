@@ -37,6 +37,15 @@ export const COLORS = {
   danger: '#F04452',
   /** 집계중 등 대기 상태 */
   warning: '#FFB020',
+
+  /**
+   * 뽑기 개봉 전체화면의 무대 배경 — **뽑기 전용**.
+   *
+   * 앱은 라이트 고정이지만(가이드 0장) 뽑기 연출은 **의도된 예외**다(가이드 7.1).
+   * 절단면에서 나오는 빛과 등급 글로우가 연회색 배경에서는 보이지 않는다.
+   * ⚠️ 다른 화면에 쓰지 말 것.
+   */
+  drawStage: '#141A21',
 } as const
 
 export type ColorToken = keyof typeof COLORS
