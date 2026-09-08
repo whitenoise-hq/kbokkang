@@ -1,58 +1,59 @@
 import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
-import { NICKNAME_MAX_LENGTH, nicknameSchema } from '@kbokkang/shared'
+import { NICKNAME_MAX_LENGTH } from '@kbokkang/shared'
 import { SCREEN_PADDING, SECTION_GAP, SPACING } from '@/theme/colors'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Screen } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { TextField } from '@/components/ui/TextField'
-import { MOCK_TAKEN_NICKNAMES, mockProfile } from '@/mocks/profile'
+import { NICKNAME_TAKEN_MESSAGE, checkNicknameFormat } from '@/lib/nickname'
+import { isNicknameAvailable, useMyProfile, useUpdateProfile } from '@/hooks/useProfile'
 
 /**
  * 닉네임 변경 — 설정에서 들어온다(앱기획서 3.5).
  *
- * **온보딩과 같은 검증을 쓴다**(`nicknameSchema`, shared). 규칙이 두 곳으로 갈라지면
- * 온보딩은 통과한 닉네임이 설정에서 거부되는 일이 생긴다. DB 에도 같은 제약이 있다
- * (`users_nickname_length` / `users_nickname_format`).
+ * 검증은 **온보딩과 같은 함수**(`lib/nickname`)를 쓴다 — 규칙이 두 곳으로 갈라지면
+ * 온보딩은 통과한 닉네임이 설정에서 거부되는 일이 생긴다. 경합 처리 등 주의사항은
+ * 그 파일의 주석에 모아 뒀다.
  *
- * ## 저장 전에 중복을 확인한다
- *
- * 형식 검증(길이·문자)은 입력할 때마다 즉시, **중복 확인은 저장을 누를 때** 한다 —
- * 한 글자마다 서버를 부르면 낭비다. 실제로는 `is_nickname_available` RPC 를 쓴다.
- *
- * ⚠️ **중복 확인과 저장 사이에 경합이 있다.** 확인은 통과했지만 저장 순간 다른 사람이
- *    같은 닉네임을 쓸 수 있다. 그래서 6-4 에서는 저장의 **unique 위반 에러도** 처리해야
- *    한다(앱기획서 3.1). 확인만 믿으면 저장이 조용히 실패한다.
- *
- * ⚠️ 지금은 목업이다. 저장해도 마이 화면으로 돌아가면 되돌아간다.
+ * 저장은 실제로 `users` 를 업데이트한다(`useUpdateProfile`). DB 는 **컬럼 단위 grant** 로
+ * 닉네임·응원팀만 수정하게 막아 두었다.
  */
 const NicknameScreen = () => {
-  const current = mockProfile().nickname
+  const profile = useMyProfile()
+  const update = useUpdateProfile()
+  const current = profile.data?.nickname ?? ''
+
   const [value, setValue] = useState(current)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  const parsed = nicknameSchema.safeParse(value)
+  const format = checkNicknameFormat(value)
   const changed = value.trim() !== current
-  const canSave = parsed.success && changed
+  const canSave = format.ok && changed
 
-  const save = () => {
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? '닉네임을 확인해 주세요')
+  const save = async () => {
+    if (!format.ok) {
+      setError(format.error)
       return
     }
 
-    // 6-4 에서 `is_nickname_available` RPC 로 교체한다
-    const taken = MOCK_TAKEN_NICKNAMES.some(
-      (item) => item.toLowerCase() === parsed.data.toLowerCase(),
-    )
-    if (taken) {
-      setError('이미 사용 중인 닉네임입니다')
-      return
-    }
+    setBusy(true)
+    try {
+      if (!(await isNicknameAvailable(format.value))) {
+        setError(NICKNAME_TAKEN_MESSAGE)
+        return
+      }
 
-    router.back()
+      await update.mutateAsync({ nickname: format.value })
+      router.back()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '잠시 후 다시 시도해 주세요')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -74,11 +75,20 @@ const NicknameScreen = () => {
             hint={`${String(value.trim().length)}/${String(NICKNAME_MAX_LENGTH)} · 한글·영문·숫자`}
             autoFocus
             returnKeyType="done"
-            onSubmitEditing={save}
+            onSubmitEditing={() => {
+              void save()
+            }}
           />
         </Card>
 
-        <Button label="저장" onPress={save} disabled={!canSave} />
+        <Button
+          label="저장"
+          onPress={() => {
+            void save()
+          }}
+          disabled={!canSave}
+          loading={busy}
+        />
       </View>
     </Screen>
   )

@@ -29,7 +29,7 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 3. **스키마 확정 + Supabase 세팅** — ✅ 완료
 4. 어드민 ↔ Supabase 연결(목업 → 실데이터, RLS·권한) — ✅ 완료
 5. 크롤링/정산(GitHub Actions) — ✅ 완료
-6. 앱(apps/mobile) — 여기도 화면 먼저, 연결 나중 — 🔄 진행 중 (6-1 골격 완료)
+6. 앱(apps/mobile) — 여기도 화면 먼저, 연결 나중 — 🔄 진행 중 (6-1 골격 · 6-2 화면 완료)
 
 ## 공통 규칙 (중요)
 
@@ -216,39 +216,117 @@ KBO 경기 승부예측 → 적중 시 포인트 획득 → 포인트로 야구 
 **6-1 골격 완료** — Expo Router + 폰트 + TanStack Query + Supabase 클라이언트.
 `expo-doctor` 21/21 통과, iOS 번들 빌드 확인.
 
-**6-2 진행 중 — 탭 셸 + 홈(예측) 완료**
+**6-2 완료 — 화면 전부(목업 데이터)**
+
+로그인 · 온보딩 · 홈(예측) · 예측 · 뽑기 · 도감 · 마이 + 하위 화면(팩 개봉 · 카드 상세 ·
+포인트 내역 · 닉네임/응원팀 변경).
 
 - 탭 **5개**(홈·예측·뽑기·도감·마이). 기획서는 4개였는데 예측 기록·성적을 분리했다.
   홈은 **당일 경기만** 보여주고 상단에 어제 결과 한 줄 배너를 둔다.
 - 홈 경기 카드는 **3열**(원정/무승부/홈)이고 셀 자체가 선택지다.
   저장은 **경기 카드마다 명시적**(선택만으로 저장하지 않는다) — 헤더 우측 작은 알약.
+- **예측 탭은 내가 예측한 경기만** 날짜별로 묶어 보여준다(경기 일정표가 아니다).
+  홈과 **같은 3열 그리드**를 쓴다 — 따로 만들었더니 팀명 길이 때문에 콜론 위치가 어긋나
+  목록이 삐뚤빼뚤했다. 획득 포인트는 날짜 헤더에 하루 합계로 올렸다.
+- **뽑기는 탭(선택) + 전체화면(개봉) 둘로 나눈다.** 탭 바가 보이는 화면에서 개봉하면
+  연출에 집중되지 않는다. 개봉은 `choose → ready → cutting → revealed` 4단계이고
+  **가로로 밀어 자른다**(위로 당기는 방식은 절단선 개념이 화면에 안 나타나서 버렸다).
+  10장 뽑기는 **한 장씩** 넘겨 본다(격자는 결과 요약표처럼 읽혔다).
+- **도감은 미보유 카드도 자리를 지킨다**(잠긴 카드). 빈칸이면 몇 장 남았는지 알 수 없어
+  수집욕이 안 생긴다. 등급별 진행률은 **필터 칩에 숫자로** 넣었다(요약 카드에 또 두면 층이 늘었다).
+- **마이는 "내가 누구고 얼마 있나"까지만.** 나머지는 메뉴로 넘긴다. 메뉴 줄은 `height: 56`
+  고정 — 패딩만 주면 값·화살표 유무로 줄마다 높이가 달라져 목록이 들쭉날쭉했다.
 - **스코어 예측 입력은 보류**(승패만 받는다). 바텀시트+스텝퍼까지 만들었다가 걷어냈다 —
   적중이 사실상 안 나는데 복잡도가 컸다. **DB·정산·스키마는 그대로**라 켤 때 화면만
   붙이면 된다(앱기획서 4장).
+- **중복 자동 환급은 폐지했다.** 중복은 카드로 쌓이고(`count+1`) **도감에서만** 판다.
+  뽑기 결과에서 바로 팔게도 만들어 봤지만 걷어냈다 — 개봉 직후는 무엇을 뽑았는지 보는
+  순간인데 "파세요" 버튼이 초점을 포인트로 옮긴다(통합기획서 6장).
 - **테두리를 쓰지 않는다(전 화면 원칙).** 여백 → 배경 계층 → 그림자 → divider 순으로
   구분하고 `borderWidth` 는 쓰지 않는다. 선택도 배경 틴트(`primaryLight`/`successLight`)로
   알린다. 카드·칸·배지에 각각 선을 뒀더니 "액자 안의 액자"가 되어 정신사나웠다.
   상세는 `docs/04_앱디자인가이드.md` 5장.
-- 남은 화면: 예측 · 도감 · 뽑기 · 온보딩.
+
+**인증 구현 완료(6-5 를 앞당겼다) — 카카오 + 애플**
+
+- `lib/auth.ts` 한 곳에서 로그인·로그아웃을 감싼다. 화면은 `supabase.auth` 를 직접 안 부른다.
+- `hooks/useSession.tsx` — 세션은 **TanStack Query 를 쓰지 않는다**(서버 데이터가 아니라
+  앱 상태다). 로그아웃 시 **쿼리 캐시를 비운다** — 안 비우면 다른 계정으로 로그인했을 때
+  이전 유저의 포인트·도감이 잠깐 보인다.
+- `AuthGate`(`app/_layout.tsx`) 가 로그인·온보딩 분기를 **한 곳에서** 판정한다(앱기획서 3.1).
+- 온보딩·설정의 닉네임/응원팀 저장은 **실제 `users` update** 다. DB 는 컬럼 단위 grant 로
+  `nickname`·`favorite_team_id` 만 허용한다.
+- ⚠️ 닉네임은 `is_nickname_available()` RPC 로 확인하지만 **저장의 unique 위반(23505)도
+  처리한다** — 확인과 저장 사이에 경합이 있다.
+
+⚠️ **현재 막혀 있는 것**
+- **개발 인증서가 없어 네이티브 빌드가 안 된다**(`security find-identity` → 0 identities).
+  애플 로그인 entitlement 때문에 시뮬레이터 빌드에도 필요하다(아래 실행 표 참고).
+- Expo Go 로는 카카오만 확인 가능하고, 복귀 주소가 `exp://<IP>:8081/--/auth/callback`
+  형태라 그 값을 **Supabase Redirect URLs 에 등록**해야 한다(`exp://**` 와일드카드 권장,
+  배포 전 제거). 등록 안 하면 Supabase 가 **오류 없이 Site URL 로 폴백**한다.
 
 ```
 app/
-  _layout.tsx        폰트 로드 · Query · SafeArea
+  _layout.tsx        폰트 로드 · Query · Session · AuthGate · Stack 옵션
+  login.tsx          카카오 · 애플
+  onboarding.tsx     닉네임 → 응원팀 (2스텝)
+  points.tsx         포인트 내역
   (tabs)/            _layout.tsx(탭 5개) · index(홈) · predict · draw · dex · my
+  pack/[type].tsx    팩 개봉 (전체화면)
+  card/[dexNo].tsx   카드 상세 · 여분 판매
+  settings/          nickname · team
 components/
-  ui/                Text(폰트 함정 흡수) · Screen · Card · Button
+  ui/                Text(폰트 함정 흡수) · Screen · ScreenHeader · Card · Button ·
+                     TextField
   game/              GameCard · PickSegment · PickCell · TeamMark · PredictFooter ·
                      YesterdayBanner · game-status-view
-hooks/               useServerNow (서버 시각 보정)
-lib/                 env · supabase · query-client · format
-mocks/               games (⚠️ 6-4 에서 삭제)
+  prediction/        PredictionDay · PredictionRow · RecordCard
+  draw/              PackCard · PackImage · CardFace
+  dex/               DexCell · DexProgressCard · FilterChipRow
+  my/                MenuRow · PointHistory
+  profile/           TeamPicker (온보딩·설정 공용)
+hooks/               useServerNow · useSession · useProfile
+lib/                 env · supabase · auth · query-client · format · nickname
+mocks/               games · predictions · draw · dex · profile (⚠️ 6-4 에서 삭제)
 theme/               colors(shared 재노출) · fonts · shadow
-types/               assets.d.ts · game.ts
+types/               assets.d.ts · game · prediction · draw · dex · card · profile
 assets/packs/        팩 이미지(상단/하단 분리) + source/ 원본
+assets/images/       icon · splash-icon (뽑기 탭 sparkles 글리프로 생성)
 metro.config.js
 ```
 
-남은 순서: 6-2 화면(목업) → 6-3 서버 RPC → 6-4 연결 → 6-5 인증 → 6-6 iOS 빌드.
+**앱 실행 — `ios` 와 `ios:build` 는 다른 명령이다**
+
+| 명령 | 하는 일 |
+| --- | --- |
+| `pnpm --filter @kbokkang/mobile start` | Metro 만. **이미 설치된 개발 빌드**에 붙는다 |
+| `pnpm --filter @kbokkang/mobile ios` | `expo start --ios` — **Expo Go** 로 연다 |
+| `pnpm --filter @kbokkang/mobile ios:build` | `expo run:ios --device "iPhone 17 Pro"` — **네이티브 빌드** |
+
+⚠️ **시뮬레이터를 `--device` 로 못 박아 뒀다.** 지정하지 않으면 `expo run:ios` 가
+**Mac 타깃**으로 붙어 `No code signing certificates are available to use` 로 실패한다
+(연결된 실기기가 없어도 그렇다 — 겪었다).
+
+⚠️⚠️ **애플 로그인 entitlement 는 시뮬레이터 빌드에도 개발 인증서를 요구한다.**
+Expo CLI 가 `com.apple.developer.applesignin` 을 그런 목록에 넣어 뒀다. Xcode →
+Settings → Accounts 에 Apple ID 를 넣고 **Apple Development** 인증서를 만들어야
+`ios:build` 가 통과한다(무료 계정도 발급된다).
+`security find-identity -v -p codesigning` 으로 확인한다.
+
+⚠️⚠️ **Expo Go 에는 우리가 넣은 네이티브 모듈이 없다.** 그러면 기능이 오류도 없이
+**조용히 사라진다** — 애플 로그인 버튼이 안 보여서 한참 찾았다. 네이티브 의존성을
+추가·변경했으면 `ios:build` 로 다시 빌드해야 반영된다.
+- 그래서 **감추는 이유를 개발 콘솔에 찍는다**(`lib/auth.ts` 의 `warnAppleUnavailable`).
+  조용히 감추면 원인이 셋(모듈 없음 / 기기 미지원 / 플랫폼 다름)이라 짚을 수 없다.
+
+⚠️⚠️ **네이티브 모듈을 파일 최상단에서 `import` 하지 말 것.** `expo-apple-authentication`
+은 로드 시 `requireNativeModule` 을 부르는데, 모듈이 없는 빌드에서는 **import 시점에
+터진다.** 그 파일이 루트 레이아웃으로 이어져 있어 **앱이 아예 안 떴다**(겪었다).
+`await import(...)` + try/catch 로 **필요할 때만** 불러온다.
+
+남은 순서: 6-3 서버 RPC → 6-4 연결(목업 제거) → 6-6 iOS 빌드.
+(6-5 인증은 6-2 중에 앞당겨 구현했다.)
 
 **앱 작업 시 주의 — 실제로 걸린 것들**
 
@@ -273,8 +351,12 @@ metro.config.js
   gitignore 되고 `expo start` 전에는 없어서, 그것만 믿으면 깨끗한 체크아웃에서 타입체크가 깨진다.
 - ⚠️ **`.env` 를 바꾸면 `--clear` 가 필요하다.** `EXPO_PUBLIC_*` 는 빌드 시점에 번들로
   인라인되므로 캐시가 남으면 옛 값이 계속 쓰인다.
-- 로컬 실행: `cd apps/mobile && pnpm ios`. **6-5 에서 애플 로그인을 넣으면 Expo Go 로는
-  안 되고** dev build 가 필요하다(`pnpm prebuild` → `expo run:ios`).
+- ⚠️⚠️ **Hermes 에 없는 최신 API 를 쓰지 말 것.** `Array.prototype.toSorted` 로 예측 탭이
+  `undefined is not a function` 으로 죽었다 — **타입체크·lint·번들 export 가 전부 통과하고
+  앱을 켜야** 드러난다(tsconfig 의 lib 는 ESNext, Metro 는 트랜스파일만 한다).
+  루트 `eslint.config.mjs` 에 `toSorted`/`toReversed`/`toSpliced`/`Object.groupBy` 금지
+  규칙을 넣어 뒀다(앱·shared 에만 적용. Node 에서 도는 어드민·크롤러는 무관).
+  복사 후 기존 메서드를 쓴다: `[...arr].sort(...)`.
 - 화면에서 `supabase` 를 직접 부르지 않는다 — `hooks/` 의 TanStack Query 훅으로만 접근(플레이북).
 
 **앱 디자인 (확정)**
@@ -283,8 +365,17 @@ metro.config.js
 - ⚠️ **화면 배경은 `surface`(연회색), 카드·탭 바는 `background`(흰색)** — 토큰 이름과 반대다.
   이름대로 화면을 흰색으로 두면 카드·탭 바까지 전부 흰색이라 아무것도 구분되지 않는다
   (어드민에서 겪은 것과 같은 문제).
-- ⚠️ 경계가 필요한 곳은 **`borderStrong`(#D1D6DB)** 을 쓴다. `border`(#E5E8EB)는 흰 배경에서
-  거의 안 보인다. `textDisabled` 를 테두리로 쓰지 말 것(의미가 어긋난다).
+- ⚠️⚠️ **테두리(`borderWidth`)를 쓰지 않는다 — 전 화면 원칙.** 구분은 여백 → 배경 계층 →
+  그림자 → 얇은 divider 순이고, 선택·강조도 **배경 틴트**로 알린다(가이드 5장).
+  - 유일한 예외는 **탭 바 상단 선 한 줄**이고 거기에만 `borderStrong`(#D1D6DB)을 쓴다.
+    `border`(#E5E8EB)는 카드 안 divider 색이다. `textDisabled` 를 선으로 쓰지 말 것.
+  - **알약 배지도 쓰지 않는다.** 상태는 글자색으로 알린다.
+- ⚠️ **`Button` 의 `secondary` 를 회색 화면(`surface`) 위에 쓰지 말 것.** 배경이 `surface` 라
+  화면과 같은 색이 되어 **버튼으로 보이지 않는다**(도감 상세 판매 버튼이 그랬다).
+  흰 카드 안이나 어두운 배경(뽑기 개봉) 전용이다.
+- ⚠️ **화면 옵션(`presentation` 등)을 화면 컴포넌트 안에서 `<Stack.Screen options>` 로
+  주지 말 것.** 리렌더마다 옵션이 다시 적용돼 **화면이 재마운트**되고 `useState` 가 날아간다
+  (개봉 화면에서 장수를 골라도 처음 상태로 돌아갔다). `app/_layout.tsx` 에 선언한다.
 - ⚠️ **전체 폭 세그먼트에 `scale` 눌림 효과를 쓰지 말 것.** 중앙 기준 축소로 위아래에 틈이
   생겨 깜빡인다(겪었다). 배경색 변화로 대체한다.
 - ⚠️ **탭 바에 중앙 강조 버튼을 넣지 말 것.** 시도했는데 혼자 튀어나와 열이 맞지 않았다.
@@ -295,6 +386,8 @@ metro.config.js
   빛 방사 → 카드 솟아오름. 10연차는 팩 10개 일괄 자르기, 최고 등급을 마지막 순서로.
   상세 스펙·필요 에셋은 `docs/04_앱디자인가이드.md` 7장.
 - 인증: **카카오(웹 OAuth) + 애플(네이티브)**. 소셜을 제공하면 Apple 도 필수(App Store 4.8).
+  브랜드 버튼 색·문구는 사업자 가이드를 따르므로 **디자인 토큰의 예외**다 —
+  그 색을 `packages/shared/theme.ts` 에 넣지 않는다(다른 화면에 번지지 않게).
 - ⚠️ 닉네임은 `public.users.nickname` + `is_nickname_available()` RPC 를 쓴다.
   플레이북은 `user_metadata` 를 권하지만 그러면 **중복 체크가 불가능**하다.
 
@@ -320,9 +413,24 @@ metro.config.js
 
 - `delete_account` RPC — **App Store 5.1.1(v) 필수.** 없으면 리젝된다.
   `users`·`user_cards`·`predictions`·`draws`·`point_transactions` 를 전부 정리해야 한다.
-- `draw_cards` RPC — 뽑기(서버 추첨. 클라 신뢰 금지)
-- `sell_card` RPC — 중복 판매(`user_cards` 에 delete 권한이 없어 RPC 가 필요)
+  auth 유저까지 지워야 하므로 **클라이언트에서 처리할 수 없다**(service role 필요).
+  지금 마이 화면은 확인 창까지만 뜨고 "준비 중" 안내를 띄운다.
+- `draw_cards` RPC — 뽑기. ⚠️⚠️ **지금 목업은 클라이언트에서 확률을 굴린다**
+  (`mocks/draw.ts`). 그대로 두면 결과 조작이 가능하고 포인트 차감·수량 증가가
+  **DB 트랜잭션 밖**에서 일어난다. 반드시 서버로 옮긴다.
+  - 중복이면 `user_cards.count + 1`, **환급은 하지 않는다**(통합기획서 6장).
+- `sell_card` RPC — 여분 판매(`user_cards` 에 delete 권한이 없어 RPC 가 필요).
+  **수량 확인(마지막 1장 보호)과 포인트 지급이 한 트랜잭션**이어야 한다.
 - ~~예측 마감 검증~~ — 확인 완료. `predictions_insert_own` RLS 정책에 이미 있다.
+- ~~인증(6-5)~~ — 6-2 중에 앞당겨 구현했다. 남은 것은 **개발 인증서**뿐이다.
 
-미결: 10연차 할인율 확정, 구단 로고 사용 리스크 판단, 카드 생성 프롬프트 확정,
-카드 프레임 레이아웃(통이미지 위 이름·번호·등급 배지 배치).
+**미결**
+
+- **개발 인증서** — Xcode 에 Apple ID 를 넣고 Apple Development 인증서를 만들어야
+  `ios:build` 가 통과한다. 그전까지 애플 로그인은 확인할 수 없다.
+- **카드 이미지가 한 장도 없다.** `CardFace` 가 등급색 자리표시 프레임을 그린다.
+  실제 이미지가 들어오면 같은 자리에 들어가고 글자 위치는 그대로다.
+- **방사형 빛·스파클 PNG**(가이드 7.3) — 개봉 연출의 빛은 흰 도형으로 근사해 뒀다.
+- **`expo-haptics` 미설치** — 개봉 진동이 없다(가이드 7.1 ④).
+- 10연차 할인율 확정, 구단 로고 사용 리스크 판단, 카드 생성 프롬프트 확정,
+  카드 프레임 레이아웃(통이미지 위 이름·번호·등급 배지 배치).

@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/Screen'
 import { Text } from '@/components/ui/Text'
 import { TeamMark } from '@/components/game/TeamMark'
 import { MenuRow } from '@/components/my/MenuRow'
+import { signOut } from '@/hooks/useSession'
 import { formatPoints } from '@/lib/format'
 import { mockProfile } from '@/mocks/profile'
 
@@ -34,16 +35,12 @@ import { mockProfile } from '@/mocks/profile'
  * App Store 심사 지침 **5.1.1(v)** — 계정을 만들 수 있는 앱은 앱 안에서 계정을 삭제할
  * 수단을 제공해야 한다. 없으면 리젝된다. 지우지 말 것.
  *
- * ⚠️ 지금은 목업이다. 6-4/6-5 에서 `users` 조회·`profileUpdateSchema` 저장·
- *    `delete_account` RPC 로 바뀐다. **로그아웃·탈퇴는 인증(6-5) 연결 전이라 실제로
- *    동작하지 않는다** — 확인 창까지만 뜬다.
+ * ⚠️ 프로필 표시는 아직 목업이다(6-4 에서 `useMyProfile` 로 교체). **로그아웃은 실제로
+ *    동작한다.** 회원 탈퇴는 `delete_account` RPC(6-3)가 필요하다 — auth 유저까지 지워야
+ *    해서 클라이언트에서 처리할 수 없다.
  */
 const MyScreen = () => {
   const profile = useMemo(mockProfile, [])
-
-  const notReady = (action: string) => {
-    Alert.alert(action, '로그인 기능을 연결한 뒤 동작합니다.')
-  }
 
   const confirmLogout = () => {
     Alert.alert('로그아웃', '로그아웃할까요?', [
@@ -51,7 +48,13 @@ const MyScreen = () => {
       {
         text: '로그아웃',
         onPress: () => {
-          notReady('로그아웃')
+          // 로그아웃하면 관문(`AuthGate`)이 로그인 화면으로 보낸다 — 여기서 이동시키지 않는다
+          void signOut().catch((cause: unknown) => {
+            Alert.alert(
+              '로그아웃',
+              cause instanceof Error ? cause.message : '잠시 후 다시 시도해 주세요',
+            )
+          })
         },
       },
     ])
@@ -64,7 +67,9 @@ const MyScreen = () => {
         text: '탈퇴',
         style: 'destructive',
         onPress: () => {
-          notReady('회원 탈퇴')
+          // ⚠️ `delete_account` RPC 는 6-3 에서 만든다. auth 유저까지 지워야 하므로
+          //    클라이언트에서 지울 수 없다(service role 이 필요하다).
+          Alert.alert('회원 탈퇴', '탈퇴 기능은 아직 준비 중입니다.')
         },
       },
     ])
